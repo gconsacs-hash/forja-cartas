@@ -32,14 +32,28 @@
 
   /* --- glifos ------------------------------------------------------- */
 
+  /* Los glifos no se rellenan de negro plano: un degradado vertical les da el
+     mismo relieve que tienen los simbolos impresos. */
+  function tintaDe(ctx, cx, cy, r) {
+    var g = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
+    g.addColorStop(0, '#362e2a');
+    g.addColorStop(0.5, '#15100f');
+    g.addColorStop(1, '#070605');
+    return g;
+  }
+
   function glifoTexto(ctx, txt, cx, cy, r, color) {
     ctx.save();
-    ctx.fillStyle = color || TINTA;
+    ctx.fillStyle = color || tintaDe(ctx, cx, cy, r);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    var tam = r * (txt.length > 1 ? 1.15 : 1.35);
-    ctx.font = '700 ' + tam.toFixed(2) + 'px "Cambria","Georgia",serif';
-    ctx.fillText(txt, cx, cy + r * 0.04);
+    // los numeros y la X van en palo seco pesado, como en la carta impresa
+    var numero = /^[0-9]+$/.test(txt);
+    var tam = r * (txt.length > 1 ? 1.2 : 1.46);
+    ctx.font = numero || txt === 'X'
+      ? '900 ' + tam.toFixed(2) + 'px "Segoe UI Black","Arial Black","Segoe UI",sans-serif'
+      : '700 ' + (tam * 0.95).toFixed(2) + 'px "Cambria","Georgia",serif';
+    ctx.fillText(txt, cx, cy + r * 0.03);
     ctx.restore();
   }
 
@@ -50,7 +64,7 @@
       return [cx + Math.cos(a) * r * d, cy + Math.sin(a) * r * d];
     }
     ctx.save();
-    ctx.fillStyle = TINTA;
+    ctx.fillStyle = tintaDe(ctx, cx, cy, r);
     ctx.beginPath();
     ctx.arc(cx, cy, r * 0.37, 0, Math.PI * 2);
     ctx.fill();
@@ -74,7 +88,7 @@
   /* Gota de la Isla: punta arriba y panza circular abajo. */
   function gota(ctx, cx, cy, r) {
     ctx.save();
-    ctx.fillStyle = TINTA;
+    ctx.fillStyle = tintaDe(ctx, cx, cy, r);
     var baseY = cy + r * 0.2;
     var radio = r * 0.6;
     ctx.beginPath();
@@ -92,7 +106,7 @@
   function calavera(ctx, cx, cy, r, fondo) {
     var hueco = fondo || fondoDe('B');
     ctx.save();
-    ctx.fillStyle = TINTA;
+    ctx.fillStyle = tintaDe(ctx, cx, cy, r);
     ctx.beginPath();
     ctx.ellipse(cx, cy - r * 0.16, r * 0.68, r * 0.6, 0, Math.PI, Math.PI * 2);
     ctx.bezierCurveTo(cx + r * 0.68, cy + r * 0.16, cx + r * 0.54, cy + r * 0.28, cx + r * 0.4, cy + r * 0.34);
@@ -129,7 +143,7 @@
      de llama recortada a la izquierda. */
   function llama(ctx, cx, cy, r) {
     ctx.save();
-    ctx.fillStyle = TINTA;
+    ctx.fillStyle = tintaDe(ctx, cx, cy, r);
     ctx.beginPath();
     ctx.moveTo(cx + r * 0.1, cy - r * 0.94);
     ctx.bezierCurveTo(cx + r * 0.5, cy - r * 0.44, cx + r * 0.76, cy + r * 0.02, cx + r * 0.6, cy + r * 0.4);
@@ -145,7 +159,7 @@
   /* Arbol del Bosque: copa de tres lobulos y tronco que se abre en la base. */
   function arbol(ctx, cx, cy, r) {
     ctx.save();
-    ctx.fillStyle = TINTA;
+    ctx.fillStyle = tintaDe(ctx, cx, cy, r);
     ctx.beginPath();
     ctx.moveTo(cx - r * 0.26, cy + r * 0.86);
     ctx.quadraticCurveTo(cx - r * 0.09, cy + r * 0.6, cx - r * 0.09, cy + r * 0.1);
@@ -171,7 +185,7 @@
 
   function diamante(ctx, cx, cy, r, fondo) {
     ctx.save();
-    ctx.fillStyle = TINTA;
+    ctx.fillStyle = tintaDe(ctx, cx, cy, r);
     ctx.beginPath();
     ctx.moveTo(cx, cy - r * 0.82);
     ctx.quadraticCurveTo(cx + r * 0.2, cy - r * 0.2, cx + r * 0.6, cy);
@@ -185,7 +199,7 @@
 
   function rayo(ctx, cx, cy, r) {
     ctx.save();
-    ctx.fillStyle = TINTA;
+    ctx.fillStyle = tintaDe(ctx, cx, cy, r);
     ctx.beginPath();
     ctx.moveTo(cx + r * 0.34, cy - r * 0.84);
     ctx.lineTo(cx - r * 0.42, cy + r * 0.12);
@@ -200,7 +214,7 @@
 
   function copo(ctx, cx, cy, r) {
     ctx.save();
-    ctx.strokeStyle = TINTA;
+    ctx.strokeStyle = tintaDe(ctx, cx, cy, r);
     ctx.lineWidth = r * 0.16;
     ctx.lineCap = 'round';
     for (var i = 0; i < 3; i++) {
@@ -215,8 +229,8 @@
 
   function giro(ctx, cx, cy, r, sentido) {
     ctx.save();
-    ctx.strokeStyle = TINTA;
-    ctx.fillStyle = TINTA;
+    ctx.strokeStyle = tintaDe(ctx, cx, cy, r);
+    ctx.fillStyle = tintaDe(ctx, cx, cy, r);
     ctx.lineWidth = r * 0.26;
     ctx.lineCap = 'round';
     var ini = sentido > 0 ? -1.1 : 2.2;
@@ -254,26 +268,52 @@
     }
   }
 
+  /* Disco en tres capas: anillo oscuro, cara con luz desde arriba a la
+     izquierda y sombra interior abajo. Es lo que separa un circulo plano de
+     una ficha impresa. */
   function discoBase(ctx, cx, cy, r, color, sombra) {
+    var cara = r * 0.88;
+
     ctx.save();
     if (sombra > 0) {
       ctx.shadowColor = 'rgba(0,0,0,' + U.limitar(sombra, 0, 1) + ')';
-      ctx.shadowBlur = r * 0.5;
-      ctx.shadowOffsetY = r * 0.16;
+      ctx.shadowBlur = r * 0.55;
+      ctx.shadowOffsetY = r * 0.18;
     }
-    var deg = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
-    deg.addColorStop(0, U.mezclar(color, 0.28));
-    deg.addColorStop(1, U.mezclar(color, -0.16));
-    ctx.fillStyle = deg;
+    ctx.fillStyle = '#17120f';
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+
+    var deg = ctx.createRadialGradient(
+      cx - cara * 0.34, cy - cara * 0.4, cara * 0.08,
+      cx, cy, cara * 1.12
+    );
+    deg.addColorStop(0, U.mezclar(color, 0.45));
+    deg.addColorStop(0.5, color);
+    deg.addColorStop(1, U.mezclar(color, -0.3));
     ctx.save();
-    ctx.strokeStyle = 'rgba(20,14,12,0.75)';
-    ctx.lineWidth = Math.max(1, r * 0.08);
+    ctx.fillStyle = deg;
     ctx.beginPath();
-    ctx.arc(cx, cy, r - ctx.lineWidth / 2, 0, Math.PI * 2);
+    ctx.arc(cx, cy, cara, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, cara, 0, Math.PI * 2);
+    ctx.clip();
+    var luz = ctx.createLinearGradient(cx - cara, cy - cara, cx + cara * 0.4, cy + cara * 0.7);
+    luz.addColorStop(0, 'rgba(255,255,255,0.5)');
+    luz.addColorStop(0.42, 'rgba(255,255,255,0.07)');
+    luz.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = luz;
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+    ctx.lineWidth = cara * 0.2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, cara * 0.94, Math.PI * 0.08, Math.PI * 0.92);
     ctx.stroke();
     ctx.restore();
   }
@@ -313,12 +353,12 @@
       ctx.arc(cx, cy, r - ctx.lineWidth / 2, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
-      dibujarGlifo(ctx, izq, cx - r * 0.33, cy - r * 0.33, r * 0.5, fondoDe(izq));
-      dibujarGlifo(ctx, der, cx + r * 0.33, cy + r * 0.33, r * 0.5, fondoDe(der));
+      dibujarGlifo(ctx, izq, cx - r * 0.33, cy - r * 0.33, r * 0.46, fondoDe(izq));
+      dibujarGlifo(ctx, der, cx + r * 0.33, cy + r * 0.33, r * 0.46, fondoDe(der));
       return;
     }
     discoBase(ctx, cx, cy, r, fondoDe(s), op.sombra);
-    dibujarGlifo(ctx, s, cx, cy, r * 0.82, fondoDe(s));
+    dibujarGlifo(ctx, s, cx, cy, r * 0.72, fondoDe(s));
   }
 
   return {
