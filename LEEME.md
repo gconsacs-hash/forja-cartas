@@ -11,6 +11,34 @@ Funciona sin internet y sin cuentas: todo ocurre en tu navegador.
 
 1. Doble clic en **Iniciar.cmd** (abre `http://localhost:3420`).
 2. También sirve abrir `index.html` directamente con doble clic.
+3. En internet: <https://gconsacs-hash.github.io/forja-cartas/>
+
+## Instalarla en el celular
+
+1. Abre <https://gconsacs-hash.github.io/forja-cartas/> en Chrome.
+2. Menú ⋮ → **Instalar aplicación** (o *Agregar a pantalla de inicio*).
+3. Queda con ícono propio y a pantalla completa. Tras la primera carga aparece
+   el aviso "ya funciona sin conexión": desde ahí se abre aunque no haya señal.
+
+Las cartas se guardan en el navegador de **cada** dispositivo: lo que hagas en
+el celular no aparece en el PC. Para pasarlas de uno a otro, usa *Respaldo
+completo* (JSON) e *Importar JSON*.
+
+También se puede usar sin internet por la WiFi de la casa: con `Iniciar.cmd`
+corriendo, el PC muestra en la ventana negra la dirección tipo
+`http://192.168.x.x:3420` que se abre desde el celular (así no se instala como
+app, y necesita el PC encendido).
+
+### Publicar los cambios
+
+Al tocar el código, sube el número de `VERSION` en `sw.js` (para que los
+celulares con la app instalada reciban la actualización) y corre:
+
+```
+powershell -ExecutionPolicy Bypass -File publicar.ps1
+```
+
+Usa `gh` (GitHub CLI), que ya está autenticado; no hace falta instalar git.
 
 ## Las 5 plantillas
 

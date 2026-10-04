@@ -263,7 +263,11 @@
      sin quedar disponible sin conexion. */
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('sw.js').catch(function () {
+      navigator.serviceWorker.register('sw.js').then(function () {
+        return navigator.serviceWorker.ready;
+      }).then(function () {
+        App.mensaje('Guardada en este dispositivo: ya funciona sin conexion.');
+      }).catch(function () {
         /* sin service worker la app funciona igual, solo que en linea */
       });
     });
