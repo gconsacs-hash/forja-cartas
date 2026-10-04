@@ -260,14 +260,66 @@
   /* Instalacion en el celular: el navegador solo admite el service worker en
      https o en localhost, asi que fuera de ahi la app sigue funcionando pero
      sin quedar disponible sin conexion. */
+  var botonActualizar = document.getElementById('actualizar');
+  var recargando = false;
+  var registroSW = null;
+
+  /* La usa el boton "Buscar actualizacion" de la pestana Guardar. */
+  App.buscarActualizacion = function () {
+    if (!registroSW) {
+      App.mensaje('Esta version se abrio sin instalar, no hay nada que buscar.');
+      return;
+    }
+    App.mensaje('Buscando una version nueva…');
+    registroSW.update().then(function () {
+      setTimeout(function () {
+        if (botonActualizar.hidden) App.mensaje('Ya tienes la ultima version.');
+      }, 2500);
+    }).catch(function () {
+      App.mensaje('No se pudo comprobar: revisa la conexion.', true);
+    });
+  };
+
+  function ofrecerActualizacion() {
+    botonActualizar.hidden = false;
+    App.mensaje('Hay una version nueva lista: toca "Actualizar".');
+  }
+
+  botonActualizar.addEventListener('click', function () {
+    if (recargando) return;
+    recargando = true;
+    botonActualizar.textContent = 'Actualizando…';
+    location.reload();
+  });
+
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('sw.js').then(function () {
-        return navigator.serviceWorker.ready;
-      }).then(function () {
-        App.mensaje('Guardada en este dispositivo: ya funciona sin conexion.');
+      navigator.serviceWorker.register('sw.js').then(function (registro) {
+        registroSW = registro;
+        navigator.serviceWorker.ready.then(function () {
+          App.mensaje('Guardada en este dispositivo: ya funciona sin conexion.');
+        });
+        // busca version nueva al abrir y cada media hora mientras este abierta
+        registro.update();
+        setInterval(function () { registro.update(); }, 30 * 60 * 1000);
+        registro.addEventListener('updatefound', function () {
+          var entrante = registro.installing;
+          if (!entrante) return;
+          entrante.addEventListener('statechange', function () {
+            // solo avisamos si ya habia una version funcionando antes
+            if (entrante.state === 'installed' && navigator.serviceWorker.controller) {
+              ofrecerActualizacion();
+            }
+          });
+        });
       }).catch(function () {
         /* sin service worker la app funciona igual, solo que en linea */
+      });
+
+      // si el navegador ya habia dejado lista la version nueva en una visita
+      // anterior, el cambio de controlador llega apenas se abre
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!recargando) ofrecerActualizacion();
       });
     });
   }

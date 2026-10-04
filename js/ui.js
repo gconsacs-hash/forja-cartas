@@ -812,6 +812,14 @@
     C.boton(fe2, 'Respaldo completo', function () {
       Ex.jsonLote(Ga.leer());
     }, 'mini');
+    var g3 = C.grupo(caja, 'Version de la app', false);
+    C.aviso(g3, 'La app se actualiza sola: cuando hay una version nueva aparece arriba el ' +
+      'boton "Actualizar". Aqui puedes comprobarlo a mano.');
+    C.boton(g3, 'Buscar actualizacion ahora', function () {
+      if (App.buscarActualizacion) App.buscarActualizacion();
+      else App.mensaje('Esta copia se abrio sin instalar.');
+    }, 'mini');
+
     C.archivo(g2, 'Importar JSON', function (archivo) {
       Ar.leerTexto(archivo, function (err, texto) {
         if (err) { App.mensaje(err.message, true); return; }
