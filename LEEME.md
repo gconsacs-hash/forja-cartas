@@ -16,9 +16,18 @@ Funciona sin internet y sin cuentas: todo ocurre en tu navegador.
 ## Instalarla en el celular
 
 1. Abre <https://gconsacs-hash.github.io/forja-cartas/> en Chrome.
-2. Menú ⋮ → **Instalar aplicación** (o *Agregar a pantalla de inicio*).
-3. Queda con ícono propio y a pantalla completa. Tras la primera carga aparece
+2. Arriba del todo, en el panel, aparece **Instalar en este dispositivo** con un
+   botón ⬇ *Instalar Forja de Cartas*. Ese botón es la forma más directa.
+3. Si el botón no aparece, esa misma sección explica la ruta del menú según el
+   equipo (Android, iPhone o computador). En Chrome de Android es
+   menú ⋮ → *Agregar a la pantalla principal* / *Instalar aplicación*; en iPhone
+   hay que usar **Safari** → Compartir → *Agregar a inicio*, porque Chrome en
+   iPhone no instala aplicaciones.
+4. Queda con ícono propio y a pantalla completa. Tras la primera carga aparece
    el aviso "ya funciona sin conexión": desde ahí se abre aunque no haya señal.
+
+Chrome a veces tarda unos segundos en ofrecer la instalación (espera a guardar
+la app para uso sin conexión): si no aparece de inmediato, recarga la página.
 
 Las cartas se guardan en el navegador de **cada** dispositivo: lo que hagas en
 el celular no aparece en el PC. Para pasarlas de uno a otro, usa *Respaldo

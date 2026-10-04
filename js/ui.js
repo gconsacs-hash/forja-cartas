@@ -23,6 +23,81 @@
       .concat(App.fuentes.map(function (n) { return ['"' + n + '",serif', n + ' (propia)']; }));
   }
 
+  /* --------------------------------------------------------- instalar */
+
+  function instalada() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+  }
+
+  function navegador() {
+    var ua = navigator.userAgent;
+    if (/iPhone|iPad|iPod/.test(ua)) return 'ios';
+    if (/Android/.test(ua)) return /Chrome|Chromium/.test(ua) ? 'android' : 'android-otro';
+    return 'escritorio';
+  }
+
+  function seccionInstalar(caja) {
+    caja.innerHTML = '';
+    if (instalada()) return;              // ya esta instalada: no estorbar
+    if (location.protocol === 'file:') return;
+
+    var g = C.grupo(caja, 'Instalar en este dispositivo', true);
+
+    if (App.instalacion.evento) {
+      C.boton(g, '⬇ Instalar Forja de Cartas', function () {
+        var ev = App.instalacion.evento;
+        if (!ev) return;
+        App.instalacion.evento = null;
+        ev.prompt();
+        ev.userChoice.then(function (res) {
+          if (res.outcome === 'accepted') {
+            App.mensaje('Instalada. Busca el icono "Forja" entre tus aplicaciones.');
+            App.refrescar('instalar');
+          } else {
+            App.mensaje('Instalacion cancelada. Puedes volver a intentarlo cuando quieras.');
+            App.instalacion.evento = ev;
+          }
+        });
+      });
+      C.aviso(g, 'Queda con icono propio, a pantalla completa y funciona sin conexion.');
+      return;
+    }
+
+    // Chrome no ofrecio instalar: explicamos la ruta de cada equipo
+    var donde = navegador();
+    if (donde === 'ios') {
+      C.aviso(g, 'En iPhone o iPad: abre esta pagina en Safari (no en Chrome), toca el boton ' +
+        'Compartir (el cuadrito con la flecha) y elige "Agregar a inicio".');
+    } else if (donde === 'android') {
+      C.aviso(g, 'En Chrome de Android: toca el menu ⋮ arriba a la derecha y elige ' +
+        '"Agregar a la pantalla principal" o "Instalar aplicacion". Si no aparece, espera unos ' +
+        'segundos y recarga la pagina: Chrome la ofrece despues de guardarla para uso sin conexion.');
+    } else if (donde === 'android-otro') {
+      C.aviso(g, 'Estas en un navegador que no instala aplicaciones. Abre esta misma direccion ' +
+        'en Chrome y vuelve a intentarlo.');
+    } else {
+      C.aviso(g, 'En el computador: Chrome muestra un icono de instalar (una pantalla con una ' +
+        'flecha) al final de la barra de direcciones; tambien esta en el menu ⋮ → "Enviar, guardar ' +
+        'y compartir" → "Instalar pagina como aplicacion".');
+    }
+
+    var f = C.fila(g);
+    C.boton(f, 'Copiar el enlace', function () {
+      var url = location.href.split('?')[0];
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () {
+          App.mensaje('Enlace copiado: ' + url);
+        }, function () {
+          App.mensaje(url);
+        });
+      } else {
+        App.mensaje(url);
+      }
+    }, 'mini');
+    C.boton(f, 'Recargar', function () { location.reload(); }, 'mini');
+  }
+
   /* ------------------------------------------------------------ carta */
 
   function seccionCarta(caja) {
@@ -581,7 +656,9 @@
   }
 
   function refrescar(parte) {
+    if (parte === 'instalar') { seccionInstalar(zonas.instalar); return; }
     if (parte === 'todo') {
+      seccionInstalar(zonas.instalar);
       seccionCarta(zonas.carta);
       seccionTextos(zonas.textos);
       seccionImagenes(zonas.imagenes);

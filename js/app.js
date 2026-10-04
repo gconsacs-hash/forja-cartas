@@ -27,6 +27,7 @@
     selId: null,
     fuentes: [],
     escalaExport: 1,
+    instalacion: { evento: null },
     historial: new E.Historial(60),
     zoom: window.innerWidth < 760 ? 0.34 : 0.56
   };
@@ -214,6 +215,7 @@
   App.registrar();
 
   UI.iniciar(App, {
+    instalar: document.getElementById('zona-instalar'),
     carta: document.getElementById('zona-carta'),
     textos: document.getElementById('zona-textos'),
     imagenes: document.getElementById('zona-imagenes'),
@@ -272,6 +274,22 @@
       });
     });
   }
+
+  /* Chrome avisa cuando la app se puede instalar; guardamos el aviso para
+     ofrecerlo con un boton propio, que es mas facil de encontrar que el menu
+     del navegador. */
+  window.addEventListener('beforeinstallprompt', function (ev) {
+    ev.preventDefault();
+    App.instalacion.evento = ev;
+    UI.refrescar('instalar');
+    App.mensaje('Esta app se puede instalar: mira el boton "Instalar" del panel.');
+  });
+
+  window.addEventListener('appinstalled', function () {
+    App.instalacion.evento = null;
+    UI.refrescar('instalar');
+    App.mensaje('Instalada en este dispositivo.');
+  });
 
   raiz.App = App;
 })(typeof self !== 'undefined' ? self : this);
