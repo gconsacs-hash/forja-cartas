@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Forja de Cartas</title>
+<meta name="description" content="Editor de cartas al estilo Magic y Mitos y Leyendas, sin internet.">
+<meta name="theme-color" content="#14110f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Forja">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="iconos/icono-192.png">
+<link rel="apple-touch-icon" href="iconos/icono-192.png">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <h1>Forja de Cartas <span class="sub">Magic · Mitos y Leyendas</span></h1>
+  <div class="herramientas">
+    <button type="button" id="deshacer" class="boton mini">↶ Deshacer</button>
+    <button type="button" id="rehacer" class="boton mini">↷ Rehacer</button>
+    <span class="separador"></span>
+    <button type="button" id="zoom-menos" class="boton mini">−</button>
+    <span id="zoom-valor" class="zoom-valor">56 %</span>
+    <button type="button" id="zoom-mas" class="boton mini">+</button>
+    <button type="button" id="deseleccionar" class="boton mini">Quitar seleccion</button>
+  </div>
+  <div id="mensaje" class="mensaje"></div>
+</header>
+
+<main class="tablero">
+
+  <section class="columna izquierda">
+    <div id="zona-carta"></div>
+    <div id="zona-textos"></div>
+    <div id="zona-imagenes"></div>
+    <div id="zona-combate"></div>
+  </section>
+
+  <section class="columna centro">
+    <div class="visor-caja">
+      <div id="visor" class="visor">
+        <canvas id="lienzo" class="lienzo"></canvas>
+        <canvas id="guias" class="guias"></canvas>
+      </div>
+    </div>
+    <p class="pie">
+      750 × 1050 px a 300 ppp (63,5 × 88,9 mm). Arrastra para mover, usa las asas para
+      redimensionar y el tirador superior para girar. Flechas: mover · Supr: borrar ·
+      Ctrl+D: duplicar · Ctrl+Z: deshacer · Ctrl+S: guardar.
+    </p>
+  </section>
+
+  <section class="columna derecha">
+    <div id="zona-capas"></div>
+    <div id="zona-inspector"></div>
+    <div id="zona-galeria"></div>
+  </section>
+
+</main>
+
+<script src="js/util.js"></script>
+<script src="js/texto.js"></script>
+<script src="js/plantillas.js"></script>
+<script src="js/estado.js"></script>
+<script src="js/mana.js"></script>
+<script src="js/render.js"></script>
+<script src="js/archivos.js"></script>
+<script src="js/galeria.js"></script>
+<script src="js/exportar.js"></script>
+<script src="js/controles.js"></script>
+<script src="js/interaccion.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

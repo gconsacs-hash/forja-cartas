@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Vista de simbolos de mana</title>
+<style>
+  body { background:#17130f; color:#e8dcc9; font-family:"Segoe UI",sans-serif; margin:0; padding:18px; }
+  h2 { font-size:14px; font-weight:600; color:#c9b48a; margin:18px 0 8px; }
+  .fila { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  figure { margin:0; text-align:center; }
+  figcaption { font-size:11px; color:#9a8b7c; padding-top:4px; }
+</style>
+</head>
+<body>
+<h2>Tierras basicas · 150 px</h2>
+<div class="fila" id="grandes"></div>
+<h2>Catalogo completo · 56 px</h2>
+<div class="fila" id="medianos"></div>
+<h2>Tamano real en la caja de reglas · 22 px</h2>
+<div class="fila" id="chicos"></div>
+<script src="../js/util.js"></script>
+<script src="../js/mana.js"></script>
+<script>
+  function pinta(destino, simbolos, lado) {
+    var caja = document.getElementById(destino);
+    simbolos.forEach(function (s) {
+      var fig = document.createElement('figure');
+      var l = document.createElement('canvas');
+      l.width = lado; l.height = lado;
+      CDMana.dibujar(l.getContext('2d'), s, lado / 2, lado / 2, lado / 2 - 2, { sombra: 0.35 });
+      fig.appendChild(l);
+      var pie = document.createElement('figcaption');
+      pie.textContent = s;
+      fig.appendChild(pie);
+      caja.appendChild(fig);
+    });
+  }
+  pinta('grandes', ['W', 'U', 'B', 'R', 'G', 'C'], 150);
+  pinta('medianos', CDMana.CATALOGO, 56);
+  pinta('chicos', CDMana.CATALOGO.slice(0, 22), 22);
+</script>
+</body>
+</html>

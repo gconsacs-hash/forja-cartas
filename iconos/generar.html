@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Icono</title>
+<style>
+  html, body { margin:0; padding:0; background:#14110f; overflow:hidden; }
+  canvas { display:block; width:100vw; height:100vh; }
+</style>
+</head>
+<body>
+<canvas id="i" width="512" height="512"></canvas>
+<script src="../js/util.js"></script>
+<script src="../js/mana.js"></script>
+<script>
+  // ?margen=1 deja el area segura para los iconos con mascara de Android
+  var margen = /margen=1/.test(location.search) ? 76 : 0;
+  var c = document.getElementById('i').getContext('2d');
+  var L = 512;
+  var fondo = c.createLinearGradient(0, 0, L, L);
+  fondo.addColorStop(0, '#2a211c');
+  fondo.addColorStop(1, '#120f0d');
+  c.fillStyle = fondo;
+  c.fillRect(0, 0, L, L);
+
+  // carta inclinada con marco dorado
+  function carta(x, y, ang, escala, colores) {
+    c.save();
+    c.translate(x, y);
+    c.rotate(ang);
+    c.scale(escala, escala);
+    c.shadowColor = 'rgba(0,0,0,0.55)';
+    c.shadowBlur = 26;
+    c.shadowOffsetY = 10;
+    var w = 190, h = 266;
+    CDUtil.rutaRedondeada(c, -w / 2, -h / 2, w, h, 16);
+    c.fillStyle = '#0c0a09';
+    c.fill();
+    c.shadowColor = 'transparent';
+    var marco = c.createLinearGradient(0, -h / 2, 0, h / 2);
+    marco.addColorStop(0, colores[0]);
+    marco.addColorStop(1, colores[1]);
+    CDUtil.rutaRedondeada(c, -w / 2 + 9, -h / 2 + 9, w - 18, h - 18, 11);
+    c.fillStyle = marco;
+    c.fill();
+    CDUtil.rutaRedondeada(c, -w / 2 + 22, -h / 2 + 46, w - 44, 112, 4);
+    c.fillStyle = 'rgba(16,13,11,0.82)';
+    c.fill();
+    CDUtil.rutaRedondeada(c, -w / 2 + 22, -h / 2 + 170, w - 44, 72, 6);
+    c.fillStyle = 'rgba(247,236,210,0.9)';
+    c.fill();
+    c.restore();
+  }
+
+  var cx = 256, cy = 256 + (margen ? 0 : 0);
+  var e = margen ? 0.78 : 1;
+  carta(cx - 62 * e, cy + 10 * e, -0.22, 0.92 * e, ['#4a6d94', '#1d2d3f']);
+  carta(cx + 58 * e, cy + 2 * e, 0.17, 0.98 * e, ['#f0d898', '#9d7324']);
+
+  // simbolos de mana sobre las cartas
+  CDMana.dibujar(c, 'R', cx + 24 * e, cy - 84 * e, 42 * e, { sombra: 0.5 });
+  CDMana.dibujar(c, 'G', cx + 118 * e, cy + 92 * e, 36 * e, { sombra: 0.5 });
+  CDMana.dibujar(c, 'U', cx - 118 * e, cy + 74 * e, 34 * e, { sombra: 0.5 });
+</script>
+</body>
+</html>

@@ -1,0 +1,436 @@
+/* Motor de dibujo. Todo se dibuja en unidades de carta (750 x 1050) y la
+   escala la aplica el contexto, asi la vista previa y la exportacion a 300 o
+   600 ppp salen identicas. */
+(function (raiz) {
+  'use strict';
+  var U = raiz.CDUtil;
+  var T = raiz.CDTexto;
+  var M = raiz.CDMana;
+
+  var cache = {};
+  var alCargar = null;
+
+  function cargarImagen(src) {
+    if (!src) return null;
+    var reg = cache[src];
+    if (reg) return reg.ok ? reg.img : null;
+    var img = new Image();
+    reg = { img: img, ok: false };
+    cache[src] = reg;
+    img.onload = function () {
+      reg.ok = true;
+      if (alCargar) alCargar();
+    };
+    img.onerror = function () { reg.error = true; };
+    img.src = src;
+    return null;
+  }
+
+  function imagenLista(src) {
+    var reg = cache[src];
+    return !!(reg && reg.ok);
+  }
+
+  /* --- formas -------------------------------------------------------- */
+
+  function ruta(ctx, forma, x, y, w, h, radio) {
+    switch (forma) {
+      case 'elipse':
+        ctx.beginPath();
+        ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, Math.PI * 2);
+        break;
+      case 'escudo':
+        var r = Math.min(w, h) * 0.22;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h * 0.52);
+        ctx.quadraticCurveTo(x + w, y + h * 0.86, x + w / 2, y + h);
+        ctx.quadraticCurveTo(x, y + h * 0.86, x, y + h * 0.52);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+        break;
+      case 'cinta':
+        var p = Math.min(w * 0.12, 46);
+        ctx.beginPath();
+        ctx.moveTo(x + p, y);
+        ctx.lineTo(x + w - p, y);
+        ctx.lineTo(x + w, y + h * 0.3);
+        ctx.lineTo(x + w - p * 0.55, y + h * 0.5);
+        ctx.lineTo(x + w, y + h * 0.7);
+        ctx.lineTo(x + w - p, y + h);
+        ctx.lineTo(x + p, y + h);
+        ctx.lineTo(x, y + h * 0.7);
+        ctx.lineTo(x + p * 0.55, y + h * 0.5);
+        ctx.lineTo(x, y + h * 0.3);
+        ctx.closePath();
+        break;
+      case 'rombo':
+        ctx.beginPath();
+        ctx.moveTo(x + w / 2, y);
+        ctx.lineTo(x + w, y + h / 2);
+        ctx.lineTo(x + w / 2, y + h);
+        ctx.lineTo(x, y + h / 2);
+        ctx.closePath();
+        break;
+      default:
+        U.rutaRedondeada(ctx, x, y, w, h, radio || 0);
+    }
+  }
+
+  function rellenoDe(ctx, relleno, ident, w, h) {
+    var tipo = relleno && relleno.tipo || 'solido';
+    if (tipo === 'solido') {
+      return U.resolverColor(relleno && relleno.color || '#888888', ident);
+    }
+    var c1 = U.resolverColor((relleno.colores && relleno.colores[0]) || 'auto-a', ident);
+    var c2 = U.resolverColor((relleno.colores && relleno.colores[1]) || 'auto-b', ident);
+    var ang = ((relleno.angulo == null ? 90 : relleno.angulo) * Math.PI) / 180;
+    var dx = Math.cos(ang) * w / 2;
+    var dy = Math.sin(ang) * h / 2;
+    var deg = ctx.createLinearGradient(w / 2 - dx, h / 2 - dy, w / 2 + dx, h / 2 + dy);
+    deg.addColorStop(0, c1);
+    deg.addColorStop(1, c2);
+    return deg;
+  }
+
+  function textura(ctx, relleno, w, h) {
+    var azar = U.prng(relleno.semilla || 7);
+    ctx.save();
+    // manchas grandes y muy suaves: dan grano sin parecer lunares
+    for (var i = 0; i < 160; i++) {
+      var x = azar() * w;
+      var y = azar() * h;
+      var r = 10 + azar() * 26;
+      var a = 0.012 + azar() * 0.022;
+      var deg = ctx.createRadialGradient(x, y, 0, x, y, r);
+      var tono = azar() > 0.5 ? '120,96,58' : '255,250,232';
+      deg.addColorStop(0, 'rgba(' + tono + ',' + a.toFixed(4) + ')');
+      deg.addColorStop(1, 'rgba(' + tono + ',0)');
+      ctx.fillStyle = deg;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // fibras finas del papel
+    ctx.globalAlpha = 0.05;
+    ctx.strokeStyle = 'rgba(110,88,52,1)';
+    ctx.lineWidth = 1;
+    for (var j = 0; j < 40; j++) {
+      var fx = azar() * w;
+      var fy = azar() * h;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx + (azar() - 0.5) * 60, fy + (azar() - 0.5) * 14);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function bisel(ctx, forma, w, h, radio, fuerza) {
+    if (!fuerza) return;
+    var f = U.limitar(fuerza, 0, 1);
+    ctx.save();
+    ruta(ctx, forma, 0, 0, w, h, radio);
+    ctx.clip();
+    var deg = ctx.createLinearGradient(0, 0, 0, h);
+    deg.addColorStop(0, 'rgba(255,255,255,' + (0.5 * f).toFixed(3) + ')');
+    deg.addColorStop(0.16, 'rgba(255,255,255,0)');
+    deg.addColorStop(0.82, 'rgba(0,0,0,0)');
+    deg.addColorStop(1, 'rgba(0,0,0,' + (0.45 * f).toFixed(3) + ')');
+    ctx.fillStyle = deg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+
+  function dibujarPanel(ctx, el, ident) {
+    var w = el.w, h = el.h;
+    if (el.sombra && el.sombra.desenfoque > 0) {
+      ctx.save();
+      ctx.shadowColor = el.sombra.color || 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = el.sombra.desenfoque;
+      ctx.shadowOffsetX = el.sombra.x || 0;
+      ctx.shadowOffsetY = el.sombra.y || 0;
+      ctx.fillStyle = '#000';
+      ruta(ctx, el.forma, 0, 0, w, h, el.radio);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.save();
+    ruta(ctx, el.forma, 0, 0, w, h, el.radio);
+    ctx.fillStyle = rellenoDe(ctx, el.relleno, ident, w, h);
+    ctx.fill();
+    if (el.relleno && el.relleno.tipo === 'pergamino') {
+      ctx.save();
+      ruta(ctx, el.forma, 0, 0, w, h, el.radio);
+      ctx.clip();
+      textura(ctx, el.relleno, w, h);
+      ctx.restore();
+    }
+    ctx.restore();
+    bisel(ctx, el.forma, w, h, el.radio, el.bisel);
+    if (el.borde && el.borde.ancho > 0) {
+      ctx.save();
+      ctx.lineWidth = el.borde.ancho;
+      ctx.strokeStyle = U.resolverColor(el.borde.color, ident);
+      ruta(ctx, el.forma, el.borde.ancho / 2, el.borde.ancho / 2, w - el.borde.ancho, h - el.borde.ancho, Math.max(0, (el.radio || 0) - el.borde.ancho / 2));
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (el.borde2 && el.borde2.ancho > 0) {
+      var d = (el.borde && el.borde.ancho || 0) + 4;
+      ctx.save();
+      ctx.lineWidth = el.borde2.ancho;
+      ctx.strokeStyle = U.resolverColor(el.borde2.color, ident);
+      ruta(ctx, el.forma, d, d, w - d * 2, h - d * 2, Math.max(0, (el.radio || 0) - d));
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function dibujarImagen(ctx, el, ident) {
+    var w = el.w, h = el.h;
+    ctx.save();
+    ruta(ctx, el.forma, 0, 0, w, h, el.radio);
+    ctx.clip();
+    ctx.fillStyle = rellenoDe(ctx, el.relleno, ident, w, h);
+    ctx.fillRect(0, 0, w, h);
+    var img = cargarImagen(el.src);
+    if (img) {
+      var f = el.filtros || {};
+      var filtro = [
+        'brightness(' + (f.brillo == null ? 100 : f.brillo) + '%)',
+        'contrast(' + (f.contraste == null ? 100 : f.contraste) + '%)',
+        'saturate(' + (f.saturacion == null ? 100 : f.saturacion) + '%)',
+        'sepia(' + (f.sepia || 0) + '%)',
+        'blur(' + (f.desenfoque || 0) + 'px)'
+      ].join(' ');
+      ctx.filter = filtro;
+      var r = U.ajustarImagen({
+        anchoImagen: img.naturalWidth, altoImagen: img.naturalHeight,
+        ancho: w, alto: h, modo: el.modo, zoom: el.zoom, despX: el.despX, despY: el.despY
+      });
+      ctx.drawImage(img, r.dx, r.dy, r.dw, r.dh);
+      ctx.filter = 'none';
+    } else if (!el.src) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.28)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '400 ' + Math.max(14, Math.min(w, h) * 0.08).toFixed(0) + 'px "Segoe UI",sans-serif';
+      ctx.fillText('sin imagen', w / 2, h / 2);
+      ctx.restore();
+    }
+    if (el.vineta > 0) {
+      var rad = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.28, w / 2, h / 2, Math.max(w, h) * 0.72);
+      rad.addColorStop(0, 'rgba(0,0,0,0)');
+      rad.addColorStop(1, 'rgba(0,0,0,' + U.limitar(el.vineta, 0, 1) + ')');
+      ctx.fillStyle = rad;
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.restore();
+    if (el.borde && el.borde.ancho > 0) {
+      ctx.save();
+      ctx.lineWidth = el.borde.ancho;
+      ctx.strokeStyle = U.resolverColor(el.borde.color, ident);
+      ruta(ctx, el.forma, el.borde.ancho / 2, el.borde.ancho / 2, w - el.borde.ancho, h - el.borde.ancho, el.radio);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  /* --- texto --------------------------------------------------------- */
+
+  function fuenteCss(estilo, tamano, cursiva) {
+    return (cursiva ? 'italic ' : '') + (estilo.peso || '400') + ' ' +
+      tamano.toFixed(2) + 'px ' + (estilo.fuente || 'serif');
+  }
+
+  function medidor(ctx, estilo, tamano) {
+    var tamSimbolo = tamano * (estilo.tamanoSimbolo || 0.8);
+    return function (token) {
+      if (token.t === 's') return tamSimbolo * 1.06;
+      ctx.font = fuenteCss(estilo, tamano, token.cursiva || estilo.cursiva);
+      var w = ctx.measureText(token.v).width;
+      if (estilo.espaciado) w += estilo.espaciado * token.v.length;
+      return w;
+    };
+  }
+
+  function prepararTexto(ctx, el, campos) {
+    var estilo = el.estilo;
+    var contenido = T.aplicarCaja(T.interpolar(el.contenido, campos), estilo.caja);
+    var parrafos = T.tokenizar(contenido);
+    var anchoMax = el.w;
+    var tamano = estilo.tamano;
+
+    function calcular(tam) {
+      var medir = medidor(ctx, estilo, tam);
+      ctx.font = fuenteCss(estilo, tam, estilo.cursiva);
+      var espacio = ctx.measureText(' ').width;
+      var lineas = T.envolver(parrafos, anchoMax, medir, espacio);
+      var alto = T.altoBloque(lineas, tam, estilo.interlineado, tam * 0.3);
+      return { lineas: lineas, alto: alto, tamano: tam, espacio: espacio };
+    }
+
+    if (estilo.autoAjuste) {
+      var cabe = function (tam) { return calcular(tam).alto <= el.h; };
+      tamano = T.autoAjustar(estilo.tamanoMin || 10, estilo.tamano, cabe);
+    }
+    return calcular(tamano);
+  }
+
+  function dibujarTexto(ctx, el, ident, campos) {
+    var estilo = el.estilo;
+    var plan = prepararTexto(ctx, el, campos);
+    var tam = plan.tamano;
+    var paso = tam * (estilo.interlineado || 1.2);
+    var color = U.resolverColor(estilo.color, ident);
+    var y;
+    if (estilo.vertical === 'arriba') y = 0;
+    else if (estilo.vertical === 'abajo') y = el.h - plan.alto;
+    else y = (el.h - plan.alto) / 2;
+    y = Math.max(estilo.vertical === 'arriba' ? 0 : -plan.alto, y);
+
+    ctx.save();
+    ctx.textBaseline = 'alphabetic';
+    for (var i = 0; i < plan.lineas.length; i++) {
+      var linea = plan.lineas[i];
+      if (i > 0 && linea.nuevoParrafo && !linea.vacia && !linea.separador) y += tam * 0.3;
+      if (linea.vacia) { y += paso * 0.55; continue; }
+      if (linea.separador) {
+        ctx.save();
+        ctx.strokeStyle = U.colorConAlfa(color, 0.45);
+        ctx.lineWidth = Math.max(1, tam * 0.05);
+        ctx.beginPath();
+        ctx.moveTo(el.w * 0.08, y + paso * 0.28);
+        ctx.lineTo(el.w * 0.92, y + paso * 0.28);
+        ctx.stroke();
+        ctx.restore();
+        y += paso * 0.55;
+        continue;
+      }
+      var x = 0;
+      if (estilo.alineacion === 'centro') x = (el.w - linea.ancho) / 2;
+      else if (estilo.alineacion === 'derecha') x = el.w - linea.ancho;
+      var linBase = y + tam * 0.82;
+      for (var j = 0; j < linea.tokens.length; j++) {
+        var tk = linea.tokens[j];
+        if (tk.t === 'e') {
+          x += plan.espacio;
+          continue;
+        }
+        if (tk.t === 's') {
+          var r = tam * (estilo.tamanoSimbolo || 0.8) / 2;
+          M.dibujar(ctx, tk.v, x + r * 1.06, y + paso * 0.5, r, { sombra: 0.3 });
+          x += r * 2.12;
+          continue;
+        }
+        ctx.font = fuenteCss(estilo, tam, tk.cursiva || estilo.cursiva);
+        ctx.fillStyle = color;
+        if (estilo.sombra && estilo.sombra.desenfoque > 0) {
+          ctx.shadowColor = estilo.sombra.color;
+          ctx.shadowBlur = estilo.sombra.desenfoque;
+          ctx.shadowOffsetX = estilo.sombra.x || 0;
+          ctx.shadowOffsetY = estilo.sombra.y || 0;
+        }
+        if (estilo.espaciado) {
+          var cx = x;
+          for (var k = 0; k < tk.v.length; k++) {
+            var ch = tk.v[k];
+            if (estilo.contorno && estilo.contorno.ancho > 0) {
+              ctx.lineWidth = estilo.contorno.ancho;
+              ctx.strokeStyle = U.resolverColor(estilo.contorno.color, ident);
+              ctx.strokeText(ch, cx, linBase);
+            }
+            ctx.fillText(ch, cx, linBase);
+            cx += ctx.measureText(ch).width + estilo.espaciado;
+          }
+          x = cx;
+        } else {
+          if (estilo.contorno && estilo.contorno.ancho > 0) {
+            ctx.lineWidth = estilo.contorno.ancho;
+            ctx.strokeStyle = U.resolverColor(estilo.contorno.color, ident);
+            ctx.lineJoin = 'round';
+            ctx.strokeText(tk.v, x, linBase);
+          }
+          ctx.fillText(tk.v, x, linBase);
+          x += ctx.measureText(tk.v).width;
+        }
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+      y += paso;
+    }
+    ctx.restore();
+  }
+
+  function dibujarMana(ctx, el, ident, campos) {
+    var simbolos = T.listaCoste(T.interpolar(el.contenido, campos));
+    if (!simbolos.length) return;
+    var d = el.tamano;
+    var sep = el.separacion == null ? 6 : el.separacion;
+    var total = simbolos.length * d + (simbolos.length - 1) * sep;
+    var x = 0;
+    if (el.alineacion === 'centro') x = (el.w - total) / 2;
+    else if (el.alineacion === 'derecha') x = el.w - total;
+    var cy = el.h / 2;
+    for (var i = 0; i < simbolos.length; i++) {
+      M.dibujar(ctx, simbolos[i], x + d / 2, cy, d / 2, { sombra: el.sombra });
+      x += d + sep;
+    }
+  }
+
+  /* --- carta completa ------------------------------------------------ */
+
+  function dibujarCarta(ctx, carta, escala) {
+    var esc = escala || 1;
+    var A = U.CARTA_ANCHO;
+    var H = U.CARTA_ALTO;
+    ctx.save();
+    ctx.setTransform(esc, 0, 0, esc, 0, 0);
+    ctx.clearRect(0, 0, A, H);
+    var ident = carta.identidad;
+
+    ctx.save();
+    U.rutaRedondeada(ctx, 0, 0, A, H, carta.fondo.radio);
+    ctx.clip();
+    ctx.fillStyle = U.resolverColor(carta.fondo.color, ident);
+    ctx.fillRect(0, 0, A, H);
+
+    for (var i = 0; i < carta.elementos.length; i++) {
+      var el = carta.elementos[i];
+      if (!el.visible) continue;
+      ctx.save();
+      ctx.globalAlpha = U.limitar(el.opacidad == null ? 1 : el.opacidad, 0, 1);
+      if (el.rot) {
+        ctx.translate(el.x + el.w / 2, el.y + el.h / 2);
+        ctx.rotate((el.rot * Math.PI) / 180);
+        ctx.translate(-el.w / 2, -el.h / 2);
+      } else {
+        ctx.translate(el.x, el.y);
+      }
+      try {
+        if (el.tipo === 'panel') dibujarPanel(ctx, el, ident);
+        else if (el.tipo === 'imagen') dibujarImagen(ctx, el, ident);
+        else if (el.tipo === 'texto') dibujarTexto(ctx, el, ident, carta.campos);
+        else if (el.tipo === 'mana') dibujarMana(ctx, el, ident, carta.campos);
+      } catch (e) {
+        if (raiz.console) console.warn('Error dibujando', el.id, e);
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+    ctx.restore();
+  }
+
+  raiz.CDRender = {
+    dibujarCarta: dibujarCarta,
+    cargarImagen: cargarImagen,
+    imagenLista: imagenLista,
+    alCargar: function (fn) { alCargar = fn; }
+  };
+})(typeof self !== 'undefined' ? self : this);

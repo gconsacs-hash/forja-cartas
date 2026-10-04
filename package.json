@@ -1,0 +1,10 @@
+{
+  "name": "forja-cartas",
+  "version": "1.0.0",
+  "description": "Editor local de cartas al estilo Magic y Mitos y Leyendas",
+  "private": true,
+  "scripts": {
+    "start": "node servidor.js",
+    "test": "node --test pruebas/pruebas.js"
+  }
+}

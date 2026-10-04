@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Vista de plantillas</title>
+<style>
+  body { background:#15110f; color:#e8dcc9; font-family:"Segoe UI",sans-serif; margin:0; padding:16px; }
+  .fila { display:flex; gap:14px; flex-wrap:wrap; }
+  figure { margin:0; }
+  canvas { width:300px; height:420px; border-radius:10px; }
+  figcaption { font-size:12px; text-align:center; padding-top:6px; color:#b5a697; }
+</style>
+</head>
+<body>
+<div class="fila" id="fila"></div>
+<script src="../js/util.js"></script>
+<script src="../js/texto.js"></script>
+<script src="../js/plantillas.js"></script>
+<script src="../js/estado.js"></script>
+<script src="../js/mana.js"></script>
+<script src="../js/render.js"></script>
+<script>
+  /* ilustracion sintetica para comprobar recorte, zoom y filtros */
+  function arteDePrueba() {
+    var l = document.createElement('canvas');
+    l.width = 900; l.height = 600;
+    var c = l.getContext('2d');
+    var cielo = c.createLinearGradient(0, 0, 0, 600);
+    cielo.addColorStop(0, '#2b1b3d');
+    cielo.addColorStop(1, '#c8713a');
+    c.fillStyle = cielo; c.fillRect(0, 0, 900, 600);
+    c.fillStyle = '#f7e2a8';
+    c.beginPath(); c.arc(640, 210, 70, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#1d1526';
+    c.beginPath();
+    c.moveTo(0, 600); c.lineTo(220, 250); c.lineTo(420, 480);
+    c.lineTo(620, 200); c.lineTo(900, 600); c.closePath(); c.fill();
+    return l.toDataURL('image/jpeg', 0.9);
+  }
+  var ARTE = arteDePrueba();
+
+  var dibujos = [];
+  CDRender.alCargar(function () {
+    dibujos.forEach(function (d) { CDRender.dibujarCarta(d.ctx, d.carta, 1); });
+  });
+
+  var identidades = {
+    'magic-moderno': ['R'],
+    'magic-clasico': ['U'],
+    'arte-total': ['B'],
+    'myl': ['luz'],
+    'libre': ['bosque']
+  };
+  CDPlantillas.LISTA.forEach(function (info) {
+    var carta = CDEstado.nueva(info.id, identidades[info.id]);
+    if (info.id === 'myl') {
+      carta.campos.coste = '4';
+      carta.campos.tipo = 'Aliado — Caballero';
+      carta.campos.reglas = 'Cuando este aliado entre en juego, roba una carta.\n---\nLa fe tambien pesa.';
+    }
+    carta.elementos.forEach(function (el) {
+      if (el.tipo === 'imagen') el.src = ARTE;
+    });
+    var fig = document.createElement('figure');
+    var lienzo = document.createElement('canvas');
+    lienzo.width = 750;
+    lienzo.height = 1050;
+    fig.appendChild(lienzo);
+    var pie = document.createElement('figcaption');
+    pie.textContent = info.nombre;
+    fig.appendChild(pie);
+    document.getElementById('fila').appendChild(fig);
+    dibujos.push({ ctx: lienzo.getContext('2d'), carta: carta });
+    CDRender.dibujarCarta(lienzo.getContext('2d'), carta, 1);
+  });
+</script>
+</body>
+</html>

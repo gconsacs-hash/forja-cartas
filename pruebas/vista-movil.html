@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Revision de pantalla de celular</title>
+<style>
+  body { background:#121010; color:#e8dcc9; font:13px/1.6 "Consolas",monospace; margin:0; padding:12px; }
+  h1 { font-size:14px; color:#d8b25f; margin:0 0 8px; }
+  iframe { width:412px; height:860px; border:1px solid #3a322e; vertical-align:top; }
+  .caja { display:flex; gap:14px; align-items:flex-start; }
+  ul { margin:0; padding-left:18px; max-width:620px; }
+  li { margin-bottom:3px; }
+  .ok { color:#6f9d64; }
+  .mal { color:#c0583f; }
+</style>
+</head>
+<body>
+<h1>Elementos que se salen del ancho del celular (412 px)</h1>
+<div class="caja">
+  <iframe id="f" src="../index.html"></iframe>
+  <ul id="salida"><li>midiendo…</li></ul>
+</div>
+<script>
+  var ANCHO = 412;
+  document.getElementById('f').addEventListener('load', function () {
+    var marco = this;
+    setTimeout(function () {
+      var d = marco.contentDocument;
+      var filas = [];
+      var scroll = d.documentElement.scrollWidth;
+      filas.push({
+        texto: 'documento: scrollWidth=' + scroll + ' (ventana ' + ANCHO + ')',
+        mal: scroll > ANCHO + 1
+      });
+      var todos = d.querySelectorAll('*');
+      for (var i = 0; i < todos.length && filas.length < 26; i++) {
+        var e = todos[i];
+        var r = e.getBoundingClientRect();
+        if (r.width > 0 && r.right > ANCHO + 1) {
+          var clase = (typeof e.className === 'string' && e.className.trim())
+            ? '.' + e.className.trim().split(/\s+/).join('.') : '';
+          filas.push({
+            texto: e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + clase +
+              ' → ancho ' + Math.round(r.width) + ', borde derecho ' + Math.round(r.right),
+            mal: true
+          });
+        }
+      }
+      if (filas.length === 1) filas.push({ texto: 'nada se sale: todo cabe', mal: false });
+      document.getElementById('salida').innerHTML = filas.map(function (f) {
+        return '<li class="' + (f.mal ? 'mal' : 'ok') + '">' + f.texto + '</li>';
+      }).join('');
+    }, 1200);
+  });
+</script>
+</body>
+</html>
