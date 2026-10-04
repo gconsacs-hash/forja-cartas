@@ -280,17 +280,43 @@
     });
   };
 
-  function ofrecerActualizacion() {
-    botonActualizar.hidden = false;
-    App.mensaje('Hay una version nueva lista: toca "Actualizar".');
-  }
+  /* Guarda sin esperar al temporizador: antes de recargar no se pierde nada. */
+  App.guardarYa = function () {
+    clearTimeout(temporizadorGuardado);
+    try {
+      localStorage.setItem(CLAVE_ACTUAL, JSON.stringify(App.carta));
+    } catch (e) {
+      /* sin espacio: la carta sigue en pantalla */
+    }
+  };
 
-  botonActualizar.addEventListener('click', function () {
+  function aplicarActualizacion() {
     if (recargando) return;
     recargando = true;
+    App.guardarYa();
     botonActualizar.textContent = 'Actualizando…';
-    location.reload();
-  });
+    App.mensaje('Version nueva lista: actualizando sola…');
+    setTimeout(function () { location.reload(); }, 900);
+  }
+
+  /* La actualizacion se aplica sola. Solo si el usuario esta escribiendo se
+     espera a que suelte el campo, para no cortarle una palabra a la mitad. */
+  function ofrecerActualizacion() {
+    botonActualizar.hidden = false;
+    if (!escribiendo()) {
+      aplicarActualizacion();
+      return;
+    }
+    App.mensaje('Hay una version nueva: se instala en cuanto termines de escribir.');
+    document.addEventListener('focusout', function reintento() {
+      document.removeEventListener('focusout', reintento);
+      setTimeout(function () {
+        if (!escribiendo()) aplicarActualizacion();
+      }, 500);
+    });
+  }
+
+  botonActualizar.addEventListener('click', aplicarActualizacion);
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', function () {

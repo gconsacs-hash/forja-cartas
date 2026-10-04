@@ -2,7 +2,7 @@
    Al cambiar algun archivo, sube el numero de VERSION. */
 'use strict';
 
-const VERSION = 'forja-cartas-v7';
+const VERSION = 'forja-cartas-v8';
 
 const ARCHIVOS = [
   './',
