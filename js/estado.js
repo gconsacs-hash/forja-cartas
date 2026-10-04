@@ -76,6 +76,7 @@
       titulo: 'Carta nueva',
       plantilla: plantilla.id,
       identidad: identidad ? identidad.slice() : ['R', 'W'],
+      mezcla: 'oro',
       fondo: { color: plantilla.fondo.color, radio: plantilla.fondo.radio },
       campos: camposPorDefecto(),
       elementos: plantilla.elementos,
@@ -195,6 +196,7 @@
       titulo: obj.titulo || obj.campos && obj.campos.nombre || 'Carta',
       plantilla: plantilla.id,
       identidad: Array.isArray(obj.identidad) ? obj.identidad.slice() : ['R'],
+      mezcla: obj.mezcla === 'mitades' ? 'mitades' : 'oro',
       fondo: {
         color: (obj.fondo && obj.fondo.color) || plantilla.fondo.color,
         radio: (obj.fondo && obj.fondo.radio != null) ? obj.fondo.radio : plantilla.fondo.radio

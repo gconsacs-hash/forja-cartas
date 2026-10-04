@@ -65,7 +65,23 @@ propia carta dibujada con ese marco.
 | Saga | Capítulos I, II y III con la ilustración vertical |
 | Arte a sangre | Imagen de borde a borde con velos oscuros bajo los textos |
 | Aliado (Mitos y Leyendas) | Cinta del nombre, disco de coste, banda de raza y escudo de fuerza |
+| Marco propio | Carga tu PNG de marco: el arte va debajo y los textos encima |
 | Lienzo libre | Solo fondo, nombre, habilidades y contadores |
+
+Con dos o tres colores puedes elegir, en la pestaña Marco, entre **un solo marco
+dorado** o **cada color en su lado** (el marco se funde de uno a otro).
+
+Los marcos dibujados usan textura de metal, pergamino o cuero y un **relieve**
+regulable: positivo levanta la pieza, negativo la hunde (así la ventana del arte
+se ve rebajada). Todo eso se ajusta pieza por pieza en el Inspector.
+
+### Usar marcos de archivo
+
+Si tienes imágenes de marcos (PNG con el centro transparente), elige el marco
+**Marco propio**: la app pone tu ilustración debajo, la imagen del marco encima
+y los textos sobre todo, que es la misma forma de componer de Card Conjurer. La
+imagen se carga en la pestaña **Arte**, en la capa "Imagen del marco". Después
+puedes mover cada texto a donde caiga bien en tu marco.
 
 Cambiar de marco conserva los textos escritos, las imágenes cargadas y los
 elementos que hayas añadido tú.

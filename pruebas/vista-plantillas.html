@@ -40,6 +40,29 @@
   }
   var ARTE = arteDePrueba();
 
+  /* marco de prueba con el centro transparente, para comprobar que la capa
+     "marco-imagen" se compone sobre la ilustracion */
+  function marcoDePrueba() {
+    var l = document.createElement('canvas');
+    l.width = 750; l.height = 1050;
+    var c = l.getContext('2d');
+    c.fillStyle = '#2b2118';
+    CDUtil.rutaRedondeada(c, 0, 0, 750, 1050, 38);
+    c.fill();
+    c.globalCompositeOperation = 'destination-out';
+    CDUtil.rutaRedondeada(c, 40, 100, 670, 500, 6);
+    c.fill();
+    CDUtil.rutaRedondeada(c, 40, 650, 670, 320, 10);
+    c.fill();
+    c.globalCompositeOperation = 'source-over';
+    c.strokeStyle = '#c8a24e';
+    c.lineWidth = 6;
+    CDUtil.rutaRedondeada(c, 16, 16, 718, 1018, 28);
+    c.stroke();
+    return l.toDataURL('image/png');
+  }
+  var MARCO = marcoDePrueba();
+
   var dibujos = [];
   CDRender.alCargar(function () {
     dibujos.forEach(function (d) { CDRender.dibujarCarta(d.ctx, d.carta, 1); });
@@ -59,8 +82,12 @@
       carta.campos.tipo = 'Aliado — Caballero';
       carta.campos.reglas = 'Cuando este aliado entre en juego, roba una carta.\n---\nLa fe tambien pesa.';
     }
+    if (info.id === 'magic-moderno') {
+      carta.identidad = ['R', 'U'];
+      carta.mezcla = 'mitades';   // comprueba el marco de dos colores
+    }
     carta.elementos.forEach(function (el) {
-      if (el.tipo === 'imagen') el.src = ARTE;
+      if (el.tipo === 'imagen') el.src = el.id === 'marco-imagen' ? MARCO : ARTE;
     });
     var fig = document.createElement('figure');
     var lienzo = document.createElement('canvas');

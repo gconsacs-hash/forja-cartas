@@ -199,7 +199,15 @@
       b.style.background = 'linear-gradient(135deg,' + p.a + ',' + p.b + ')';
       b.style.color = U.textoLegible(p.a);
     });
-    C.aviso(g, 'Varios colores a la vez dan marco dorado multicolor.');
+    C.seleccion(g, 'Cuando hay varios colores',
+      [['oro', 'Un solo marco dorado'], ['mitades', 'Cada color en su lado']],
+      function () { return carta().mezcla || 'oro'; },
+      function (v) {
+        App.registrar();
+        carta().mezcla = v;
+        App.repintar();
+        App.refrescar('todo');
+      });
 
     var tp = C.el('span', 'campo-nombre', g);
     tp.textContent = 'Piezas de esta plantilla';
@@ -324,6 +332,12 @@
       function (v) { el.filtros.desenfoque = v; App.repintar(); }, { min: 0, max: 20, paso: 0.5, decimales: 1 });
     C.rango(g, 'Vineta (oscurecer bordes)', function () { return el.vineta; },
       function (v) { el.vineta = v; App.repintar(); }, { min: 0, max: 1, paso: 0.02, decimales: 2 });
+    C.rango(g, 'Relieve (negativo = hundido)', function () { return el.relieve || 0; },
+      function (v) { el.relieve = v; App.repintar(); }, { min: -1, max: 1, paso: 0.05, decimales: 2 });
+    if (el.id === 'marco-imagen') {
+      C.aviso(g, 'Esta capa va encima del arte: usa un PNG con el centro transparente ' +
+        'y los textos quedaran sobre el.');
+    }
   }
 
   function seccionImagenes(caja) {
@@ -637,7 +651,8 @@
 
   function inspectorPanel(g, el) {
     inspectorForma(g, el);
-    C.seleccion(g, 'Relleno', [['solido', 'Color plano'], ['degradado', 'Degradado'], ['pergamino', 'Pergamino']],
+    C.seleccion(g, 'Relleno', [['solido', 'Color plano'], ['degradado', 'Degradado'],
+      ['metal', 'Metal'], ['cuero', 'Cuero'], ['pergamino', 'Pergamino']],
       function () { return el.relleno.tipo; },
       function (v) { el.relleno.tipo = v; App.repintar(); App.refrescar('inspector'); });
     if (el.relleno.tipo === 'solido') {
@@ -650,13 +665,15 @@
         function (v) { el.relleno.colores[1] = v; App.repintar(); });
       C.rango(g, 'Angulo del degradado', function () { return el.relleno.angulo; },
         function (v) { el.relleno.angulo = v; App.repintar(); }, { min: 0, max: 360 });
-      if (el.relleno.tipo === 'pergamino') {
+      if (/pergamino|metal|cuero/.test(el.relleno.tipo)) {
         C.numero(g, 'Semilla de la textura', function () { return el.relleno.semilla || 7; },
           function (v) { el.relleno.semilla = v; App.repintar(); }, { min: 1, max: 999 });
       }
     }
     C.rango(g, 'Bisel (volumen)', function () { return el.bisel; },
       function (v) { el.bisel = v; App.repintar(); }, { min: 0, max: 1, paso: 0.02, decimales: 2 });
+    C.rango(g, 'Relieve (negativo = hundido)', function () { return el.relieve || 0; },
+      function (v) { el.relieve = v; App.repintar(); }, { min: -1, max: 1, paso: 0.05, decimales: 2 });
     C.rango(g, 'Filete interior', function () { return el.borde2.ancho; },
       function (v) { el.borde2.ancho = v; App.repintar(); }, { min: 0, max: 12, paso: 0.5, decimales: 1 });
     C.color(g, 'Color del filete', function () { return el.borde2.color; },

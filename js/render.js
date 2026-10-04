@@ -99,11 +99,44 @@
     }
   }
 
+  /* Modo de mezcla cuando la carta tiene varios colores: 'oro' (un solo marco
+     dorado) o 'mitades' (cada color en su lado, fundidos al centro).
+     Lo fija dibujarCarta antes de recorrer los elementos. */
+  var mezclaActual = 'oro';
+
+  function esAuto(color) {
+    return typeof color === 'string' && color.indexOf('auto') === 0;
+  }
+
+  /* Con dos o tres colores y mezcla por mitades, el relleno automatico pasa a
+     ser un degradado horizontal entre las paletas de cada color. */
+  function degradadoIdentidad(ctx, relleno, ident, w, h) {
+    if (mezclaActual !== 'mitades') return null;
+    var colores = (ident || []).filter(function (c) { return U.PALETAS[c]; });
+    if (colores.length < 2 || colores.length > 3) return null;
+    var a = relleno.colores && relleno.colores[0];
+    var b = relleno.colores && relleno.colores[1];
+    if (!esAuto(a) && !esAuto(b)) return null;
+    // las bandas arrancan en 'auto-claro'; el marco grande arranca en 'auto-a'
+    var claro = a === 'auto-claro';
+    var deg = ctx.createLinearGradient(0, 0, w, 0);
+    colores.forEach(function (c, i) {
+      var p = U.paleta(c);
+      // el volumen lo ponen el bisel y el relieve, asi que aqui basta el tono
+      var tono = claro ? p.a : U.mezclar(p.b, 0.12);
+      var pos = colores.length === 1 ? 0.5 : i / (colores.length - 1);
+      deg.addColorStop(U.limitar(pos, 0, 1), tono);
+    });
+    return deg;
+  }
+
   function rellenoDe(ctx, relleno, ident, w, h) {
     var tipo = relleno && relleno.tipo || 'solido';
     if (tipo === 'solido') {
       return U.resolverColor(relleno && relleno.color || '#888888', ident);
     }
+    var porIdentidad = degradadoIdentidad(ctx, relleno, ident, w, h);
+    if (porIdentidad) return porIdentidad;
     var c1 = U.resolverColor((relleno.colores && relleno.colores[0]) || 'auto-a', ident);
     var c2 = U.resolverColor((relleno.colores && relleno.colores[1]) || 'auto-b', ident);
     var ang = ((relleno.angulo == null ? 90 : relleno.angulo) * Math.PI) / 180;
@@ -111,6 +144,12 @@
     var dy = Math.sin(ang) * h / 2;
     var deg = ctx.createLinearGradient(w / 2 - dx, h / 2 - dy, w / 2 + dx, h / 2 + dy);
     deg.addColorStop(0, c1);
+    if (tipo === 'metal') {
+      // el metal no funde liso: tiene una banda clara a un tercio del alto
+      deg.addColorStop(0.34, U.resolverColor(c1, ident) === c1 ? U.mezclar(c1, 0.3) : c1);
+      deg.addColorStop(0.52, U.mezclar(c2, 0.1));
+      deg.addColorStop(0.78, U.mezclar(c2, -0.12));
+    }
     deg.addColorStop(1, c2);
     return deg;
   }
@@ -148,6 +187,84 @@
     ctx.restore();
   }
 
+  /* Vetas finas y reflejo diagonal: hacen que el marco parezca metal
+     estampado en vez de un degradado plano. */
+  function vetasMetal(ctx, relleno, w, h) {
+    var azar = U.prng(relleno.semilla || 5);
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    for (var i = 0; i < 70; i++) {
+      var y = azar() * h;
+      var largo = w * (0.2 + azar() * 0.8);
+      var x = azar() * (w - largo);
+      ctx.strokeStyle = azar() > 0.5 ? '#ffffff' : '#000000';
+      ctx.lineWidth = 0.6 + azar() * 1.1;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + largo, y + (azar() - 0.5) * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    var brillo = ctx.createLinearGradient(0, 0, w, h);
+    brillo.addColorStop(0, 'rgba(255,255,255,0)');
+    brillo.addColorStop(0.42, 'rgba(255,255,255,0.16)');
+    brillo.addColorStop(0.52, 'rgba(255,255,255,0.05)');
+    brillo.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = brillo;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+
+  /* Grano fino y oscuro, para cuero o piedra. */
+  function granoCuero(ctx, relleno, w, h) {
+    var azar = U.prng(relleno.semilla || 9);
+    ctx.save();
+    for (var i = 0; i < 260; i++) {
+      var x = azar() * w;
+      var y = azar() * h;
+      var r = 1 + azar() * 3.4;
+      ctx.fillStyle = azar() > 0.5
+        ? 'rgba(255,245,225,' + (0.02 + azar() * 0.05).toFixed(3) + ')'
+        : 'rgba(0,0,0,' + (0.03 + azar() * 0.07).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /* Relieve real: luz por dentro del canto superior y sombra por el inferior.
+     Se consigue trazando la figura un poco mas grande que el recorte, de modo
+     que solo entre su sombra. */
+  function relieve(ctx, forma, w, h, radio, fuerza) {
+    if (!fuerza) return;
+    // un valor negativo hunde la pieza en vez de levantarla (ventana de arte)
+    var invertido = fuerza < 0;
+    var f = U.limitar(Math.abs(fuerza), 0, 1);
+    var d = Math.max(1.6, Math.min(w, h) * 0.018) * (0.7 + f);
+    if (invertido) d = -d;
+    ctx.save();
+    ruta(ctx, forma, 0, 0, w, h, radio);
+    ctx.clip();
+    var g = Math.abs(d);
+    ctx.lineWidth = g * 1.4;
+    ctx.strokeStyle = 'rgba(0,0,0,1)';
+
+    ctx.shadowColor = 'rgba(255,255,255,' + (0.6 * f).toFixed(3) + ')';
+    ctx.shadowBlur = g * 2.2;
+    ctx.shadowOffsetX = d;
+    ctx.shadowOffsetY = d;
+    ruta(ctx, forma, -g * 2, -g * 2, w + g * 4, h + g * 4, radio + g * 2);
+    ctx.stroke();
+
+    ctx.shadowColor = 'rgba(0,0,0,' + (0.55 * f).toFixed(3) + ')';
+    ctx.shadowOffsetX = -d;
+    ctx.shadowOffsetY = -d;
+    ruta(ctx, forma, -g * 2, -g * 2, w + g * 4, h + g * 4, radio + g * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function bisel(ctx, forma, w, h, radio, fuerza) {
     if (!fuerza) return;
     var f = U.limitar(fuerza, 0, 1);
@@ -181,15 +298,19 @@
     ruta(ctx, el.forma, 0, 0, w, h, el.radio);
     ctx.fillStyle = rellenoDe(ctx, el.relleno, ident, w, h);
     ctx.fill();
-    if (el.relleno && el.relleno.tipo === 'pergamino') {
+    var tipo = el.relleno && el.relleno.tipo;
+    if (tipo === 'pergamino' || tipo === 'metal' || tipo === 'cuero') {
       ctx.save();
       ruta(ctx, el.forma, 0, 0, w, h, el.radio);
       ctx.clip();
-      textura(ctx, el.relleno, w, h);
+      if (tipo === 'pergamino') textura(ctx, el.relleno, w, h);
+      else if (tipo === 'metal') vetasMetal(ctx, el.relleno, w, h);
+      else granoCuero(ctx, el.relleno, w, h);
       ctx.restore();
     }
     ctx.restore();
     bisel(ctx, el.forma, w, h, el.radio, el.bisel);
+    relieve(ctx, el.forma, w, h, el.radio, el.relieve);
     if (el.borde && el.borde.ancho > 0) {
       ctx.save();
       ctx.lineWidth = el.borde.ancho;
@@ -250,6 +371,7 @@
       ctx.fillRect(0, 0, w, h);
     }
     ctx.restore();
+    relieve(ctx, el.forma, w, h, el.radio, el.relieve);
     if (el.borde && el.borde.ancho > 0) {
       ctx.save();
       ctx.lineWidth = el.borde.ancho;
@@ -472,6 +594,7 @@
     var esc = escala || 1;
     var A = U.CARTA_ANCHO;
     var H = U.CARTA_ALTO;
+    mezclaActual = carta.mezcla || 'oro';
     ctx.save();
     ctx.setTransform(esc, 0, 0, esc, 0, 0);
     ctx.clearRect(0, 0, A, H);

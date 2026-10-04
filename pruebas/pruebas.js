@@ -445,6 +445,39 @@ test('migrar completa lo que falta y acepta cartas parciales', () => {
   assert.ok(nombre.estilo && nombre.estilo.tamano > 0, 'no se restauro el estilo');
 });
 
+test('la mezcla de colores nace en oro y migrar solo acepta los modos validos', () => {
+  assert.strictEqual(E.nueva('magic-moderno').mezcla, 'oro');
+  const c = E.nueva('magic-moderno');
+  c.elementos = c.elementos.slice();
+  assert.strictEqual(E.migrar(Object.assign({}, c, { mezcla: 'mitades' })).mezcla, 'mitades');
+  assert.strictEqual(E.migrar(Object.assign({}, c, { mezcla: 'inventado' })).mezcla, 'oro');
+  assert.strictEqual(E.migrar(Object.assign({}, c, { mezcla: undefined })).mezcla, 'oro');
+});
+
+test('el relieve de cada pieza esta dentro de rango', () => {
+  P.LISTA.forEach(info => {
+    P.crear(info.id).elementos.forEach(el => {
+      if (el.relieve == null) return;
+      assert.ok(el.relieve >= -1 && el.relieve <= 1,
+        info.id + ' · ' + el.id + ' tiene relieve fuera de rango: ' + el.relieve);
+    });
+  });
+});
+
+test('el marco propio pone la imagen del marco sobre la ilustracion', () => {
+  const els = P.crear('marco-propio').elementos;
+  const arte = els.findIndex(el => el.id === 'arte');
+  const marco = els.findIndex(el => el.id === 'marco-imagen');
+  const nombre = els.findIndex(el => el.id === 'nombre');
+  assert.ok(arte !== -1 && marco !== -1, 'faltan las capas del marco propio');
+  assert.ok(arte < marco, 'la ilustracion debe ir debajo del marco');
+  assert.ok(marco < nombre, 'los textos deben quedar sobre el marco');
+  // el hueco del marco no puede tapar el arte con su color de fondo
+  const capa = els[marco];
+  assert.strictEqual(capa.relleno.color, 'rgba(0,0,0,0)');
+  assert.strictEqual(capa.modo, 'estirar');
+});
+
 test('migrar rechaza archivos que no son cartas', () => {
   assert.throws(() => E.migrar({ hola: 1 }), /elementos/);
   assert.throws(() => E.migrar('null'), /carta/);

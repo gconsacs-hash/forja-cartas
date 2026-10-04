@@ -67,6 +67,7 @@
     el.borde = { ancho: 3, color: 'auto-oscuro' };
     el.borde2 = { ancho: 0, color: '#f0e2b0' };
     el.bisel = 0.25;
+    el.relieve = 0;        // positivo levanta la pieza, negativo la hunde
     el.sombra = { desenfoque: 0, color: 'rgba(0,0,0,0.55)', x: 0, y: 0 };
     return fusionar(el, extra);
   }
@@ -82,6 +83,7 @@
     el.forma = 'rect';
     el.filtros = { brillo: 100, contraste: 100, saturacion: 100, desenfoque: 0, sepia: 0 };
     el.vineta = 0;
+    el.relieve = 0;
     el.borde = { ancho: 0, color: '#16110c' };
     el.relleno = { tipo: 'solido', color: '#1c1a18', colores: ['#2a2622', '#121010'], angulo: 90, semilla: 3 };
     return fusionar(el, extra);
@@ -151,26 +153,28 @@
       fondo: { color: '#0b0a09', radio: 38 },
       elementos: [
         panel('marco', 'Marco', 22, 22, A - 44, H - 44, {
-          radio: 24, bisel: 0.35,
-          borde: { ancho: 4, color: 'auto-oscuro' }
+          radio: 24, bisel: 0.3, relieve: 0.55,
+          relleno: { tipo: 'metal', colores: ['auto-a', 'auto-b'], angulo: 90, semilla: 5 },
+          borde: { ancho: 4, color: 'auto-oscuro' },
+          borde2: { ancho: 1.5, color: 'auto-claro' }
         }),
         panel('banda-nombre', 'Banda del nombre', 44, 46, A - 88, 58, {
-          radio: 14,
-          relleno: { tipo: 'degradado', colores: ['auto-claro', 'auto-a'], angulo: 90 },
-          borde: { ancho: 2, color: 'auto-oscuro' }, bisel: 0.3
+          radio: 14, bisel: 0.26, relieve: 0.5,
+          relleno: { tipo: 'metal', colores: ['auto-claro', 'auto-a'], angulo: 90, semilla: 13 },
+          borde: { ancho: 2, color: 'auto-oscuro' }
         }),
         imagen('arte', 'Ilustracion', 52, 116, A - 104, 470, {
-          radio: 4, borde: { ancho: 4, color: '#17130f' }
+          radio: 4, borde: { ancho: 4, color: '#17130f' }, relieve: -0.55
         }),
         panel('banda-tipo', 'Banda de tipo', 44, 596, A - 88, 54, {
-          radio: 12,
-          relleno: { tipo: 'degradado', colores: ['auto-claro', 'auto-a'], angulo: 90 },
-          borde: { ancho: 2, color: 'auto-oscuro' }, bisel: 0.3
+          radio: 12, bisel: 0.26, relieve: 0.5,
+          relleno: { tipo: 'metal', colores: ['auto-claro', 'auto-a'], angulo: 90, semilla: 17 },
+          borde: { ancho: 2, color: 'auto-oscuro' }
         }),
         panel('caja-texto', 'Caja de habilidades', 52, 660, A - 104, 318, {
-          radio: 12,
+          radio: 12, bisel: 0.12, relieve: -0.3,
           relleno: { tipo: 'pergamino', colores: ['#f6ead0', '#ddc9a4'], angulo: 90, semilla: 11 },
-          borde: { ancho: 2, color: 'auto-oscuro' }, bisel: 0.12
+          borde: { ancho: 2, color: 'auto-oscuro' }
         }),
         texto('nombre', 'Nombre', 60, 50, 430, 50, '{{nombre}}', {
           fuente: TITULO, tamano: 34, autoAjuste: true, tamanoMin: 18,
@@ -187,9 +191,9 @@
           color: '#1b1510', vertical: 'centro', interlineado: 1.26
         }),
         panel('caja-fr', 'Caja de fuerza', A - 212, 950, 160, 66, {
-          radio: 14,
-          relleno: { tipo: 'degradado', colores: ['auto-claro', 'auto-b'], angulo: 90 },
-          borde: { ancho: 3, color: 'auto-oscuro' }, bisel: 0.4,
+          radio: 14, bisel: 0.3, relieve: 0.6,
+          relleno: { tipo: 'metal', colores: ['auto-claro', 'auto-b'], angulo: 90, semilla: 23 },
+          borde: { ancho: 3, color: 'auto-oscuro' },
           sombra: { desenfoque: 14, color: 'rgba(0,0,0,0.5)', x: 0, y: 3 }
         }),
         texto('fr', 'Ataque / defensa', A - 212, 952, 160, 62, '{{ataque}}/{{defensa}}', {
@@ -518,6 +522,30 @@
     return { id: 'magic-saga', fondo: { color: '#0b0a09', radio: 38 }, elementos: elementos };
   }
 
+  /* Marco propio: el arte va debajo, encima se coloca una imagen de marco
+     (PNG con transparencia) y los textos quedan arriba de todo. Es la forma de
+     usar marcos que tengas en archivos en vez de los dibujados por la app. */
+  function marcoPropio() {
+    var p = magicModerno();
+    p.id = 'marco-propio';
+    var quitar = ['marco', 'banda-nombre', 'banda-tipo', 'caja-texto', 'caja-fr'];
+    p.elementos = p.elementos.filter(function (el) { return quitar.indexOf(el.id) === -1; });
+    var por = {};
+    p.elementos.forEach(function (el) { por[el.id] = el; });
+    por.arte.relieve = 0;
+    por.arte.borde = { ancho: 0, color: '#000000' };
+    por.arte.x = 40; por.arte.y = 100; por.arte.w = A - 80; por.arte.h = 500;
+    var marcoImagen = imagen('marco-imagen', 'Imagen del marco', 0, 0, A, H, {
+      radio: 38,
+      modo: 'estirar',
+      relleno: { tipo: 'solido', color: 'rgba(0,0,0,0)' },
+      borde: { ancho: 0, color: '#000000' }
+    });
+    p.elementos.splice(p.elementos.indexOf(por.arte) + 1, 0, marcoImagen);
+    por.nombre.estilo.color = '#17120e';
+    return p;
+  }
+
   /* ------------------------------------------------- Mitos y Leyendas */
 
   function myl() {
@@ -634,6 +662,7 @@
     'magic-planeswalker': magicPlaneswalker,
     'magic-saga': magicSaga,
     'arte-total': arteTotal,
+    'marco-propio': marcoPropio,
     'myl': myl,
     'libre': libre
   };
@@ -647,6 +676,7 @@
     { id: 'magic-planeswalker', nombre: 'Caminante', grupo: 'Estilo Magic', detalle: 'Tres habilidades con contador y lealtad inicial' },
     { id: 'magic-saga', nombre: 'Saga', grupo: 'Estilo Magic', detalle: 'Capitulos I, II y III con la ilustracion vertical' },
     { id: 'arte-total', nombre: 'Arte a sangre', grupo: 'Estilo Magic', detalle: 'Imagen de borde a borde con velos translucidos' },
+    { id: 'marco-propio', nombre: 'Marco propio', grupo: 'Libre', detalle: 'Carga tu PNG de marco: el arte va debajo y los textos encima' },
     { id: 'myl', nombre: 'Aliado', grupo: 'Mitos y Leyendas', detalle: 'Cinta de nombre, disco de coste y escudo de fuerza' },
     { id: 'libre', nombre: 'Lienzo libre', grupo: 'Libre', detalle: 'Solo fondo, nombre, texto y contadores' }
   ];
