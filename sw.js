@@ -1,8 +1,8 @@
-/* Service worker: deja la app instalada y funcionando sin conexion.
+﻿/* Service worker: deja la app instalada y funcionando sin conexion.
    Al cambiar algun archivo, sube el numero de VERSION. */
 'use strict';
 
-const VERSION = 'forja-cartas-v3';
+const VERSION = 'forja-cartas-v4';
 
 const ARCHIVOS = [
   './',

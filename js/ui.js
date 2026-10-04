@@ -32,6 +32,8 @@
 
   function navegador() {
     var ua = navigator.userAgent;
+    // navegador incrustado de WhatsApp, Facebook o Instagram: nunca instala
+    if (/FBAN|FBAV|Instagram|Line\/|; wv\)/.test(ua)) return 'incrustado';
     if (/iPhone|iPad|iPod/.test(ua)) return 'ios';
     if (/Android/.test(ua)) return /Chrome|Chromium/.test(ua) ? 'android' : 'android-otro';
     return 'escritorio';
@@ -66,7 +68,12 @@
 
     // Chrome no ofrecio instalar: explicamos la ruta de cada equipo
     var donde = navegador();
-    if (donde === 'ios') {
+    if (donde === 'incrustado') {
+      C.aviso(g, 'Estas viendo la pagina dentro de otra aplicacion (WhatsApp, Facebook o ' +
+        'similar) y ese navegador no instala aplicaciones. Toca el menu ⋮ de arriba y elige ' +
+        '"Abrir en Chrome" (o copia el enlace y pegalo en Chrome): ahi si aparece el boton ' +
+        'de instalar.');
+    } else if (donde === 'ios') {
       C.aviso(g, 'En iPhone o iPad: abre esta pagina en Safari (no en Chrome), toca el boton ' +
         'Compartir (el cuadrito con la flecha) y elige "Agregar a inicio".');
     } else if (donde === 'android') {
