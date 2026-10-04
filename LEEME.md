@@ -49,22 +49,42 @@ powershell -ExecutionPolicy Bypass -File publicar.ps1
 
 Usa `gh` (GitHub CLI), que ya está autenticado; no hace falta instalar git.
 
-## Las 5 plantillas
+## Los 10 marcos
 
-| Plantilla | Para qué sirve |
+Se eligen en la pestaña **Marco**, en una galería donde cada miniatura es tu
+propia carta dibujada con ese marco.
+
+| Marco | Para qué sirve |
 |---|---|
-| Magic moderno | Marco con bandas, caja de reglas y caja de fuerza/resistencia |
-| Magic clásico | Esquinas rectas, caja de texto más amplia |
-| Arte a sangre | Ilustración de borde a borde con velos oscuros bajo los textos |
-| Mitos y Leyendas | Cinta del nombre, disco de coste, banda de raza y escudo de fuerza |
-| Libre | Lienzo limpio: fondo, nombre, habilidades y contadores |
+| Criatura | Bandas, caja de reglas y caja de fuerza/resistencia |
+| Clásica | Esquinas rectas y caja de texto más amplia |
+| Legendaria | Corona de puntas sobre el nombre |
+| Arte extendido | Ilustración hasta los bordes, con los textos sobre ella |
+| Ficha | Sin coste de maná y con más ilustración |
+| Caminante | Tres habilidades con su contador y la lealtad inicial |
+| Saga | Capítulos I, II y III con la ilustración vertical |
+| Arte a sangre | Imagen de borde a borde con velos oscuros bajo los textos |
+| Aliado (Mitos y Leyendas) | Cinta del nombre, disco de coste, banda de raza y escudo de fuerza |
+| Lienzo libre | Solo fondo, nombre, habilidades y contadores |
 
-Cambiar de plantilla conserva los textos escritos, las imágenes cargadas y los
+Cambiar de marco conserva los textos escritos, las imágenes cargadas y los
 elementos que hayas añadido tú.
+
+Los marcos, los símbolos de maná y los símbolos de edición son dibujos propios
+de esta app, hechos con código: no son imágenes sacadas de las cartas reales.
 
 ## Cómo se usa
 
-**Textos de la carta** (columna izquierda): nombre, coste, tipo/raza,
+El panel izquierdo está dividido en pestañas: **Marco**, **Texto**, **Arte**,
+**Edición**, **Contadores** y **Guardar**. A la derecha quedan siempre las
+**Capas** y el **Inspector** del elemento seleccionado.
+
+**Edición** reúne el símbolo de edición (12 figuras propias teñidas según la
+rareza: común, infrecuente, rara, mítica, especial o tierra básica), la marca de
+agua que va detrás del texto de reglas y los datos del coleccionista (número,
+edición, rareza, idioma e ilustrador).
+
+**Textos de la carta** (pestaña Texto): nombre, coste, tipo/raza,
 habilidades, ilustrador, edición, rareza y número. La caja de habilidades
 entiende:
 

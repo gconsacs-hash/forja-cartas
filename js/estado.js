@@ -18,11 +18,29 @@
     { clave: 'reglas', etiqueta: 'Habilidades', tipo: 'area' },
     { clave: 'ataque', etiqueta: 'Ataque / fuerza', tipo: 'contador' },
     { clave: 'defensa', etiqueta: 'Defensa', tipo: 'contador' },
-    { clave: 'artista', etiqueta: 'Ilustrador', tipo: 'texto' },
-    { clave: 'edicion', etiqueta: 'Edicion', tipo: 'texto' },
-    { clave: 'rareza', etiqueta: 'Rareza', tipo: 'texto' },
-    { clave: 'numero', etiqueta: 'Numero', tipo: 'texto' }
+    { clave: 'artista', etiqueta: 'Ilustrador', tipo: 'texto', grupo: 'coleccionista' },
+    { clave: 'edicion', etiqueta: 'Edicion', tipo: 'texto', grupo: 'coleccionista' },
+    { clave: 'rareza', etiqueta: 'Rareza (letra)', tipo: 'texto', grupo: 'coleccionista' },
+    { clave: 'numero', etiqueta: 'Numero', tipo: 'texto', grupo: 'coleccionista' },
+    { clave: 'idioma', etiqueta: 'Idioma', tipo: 'texto', grupo: 'coleccionista' },
+    { clave: 'lealtad', etiqueta: 'Lealtad inicial', tipo: 'contador', solo: ['magic-planeswalker'] },
+    { clave: 'pw1', etiqueta: 'Contador habilidad 1', tipo: 'texto', solo: ['magic-planeswalker'] },
+    { clave: 'pw1t', etiqueta: 'Habilidad 1', tipo: 'area', solo: ['magic-planeswalker'] },
+    { clave: 'pw2', etiqueta: 'Contador habilidad 2', tipo: 'texto', solo: ['magic-planeswalker'] },
+    { clave: 'pw2t', etiqueta: 'Habilidad 2', tipo: 'area', solo: ['magic-planeswalker'] },
+    { clave: 'pw3', etiqueta: 'Contador habilidad 3', tipo: 'texto', solo: ['magic-planeswalker'] },
+    { clave: 'pw3t', etiqueta: 'Habilidad 3', tipo: 'area', solo: ['magic-planeswalker'] },
+    { clave: 'saga1', etiqueta: 'Capitulo I', tipo: 'area', solo: ['magic-saga'] },
+    { clave: 'saga2', etiqueta: 'Capitulo II', tipo: 'area', solo: ['magic-saga'] },
+    { clave: 'saga3', etiqueta: 'Capitulo III', tipo: 'area', solo: ['magic-saga'] }
   ];
+
+  /* Campos que tiene sentido mostrar para una plantilla dada. */
+  function camposDe(plantillaId) {
+    return CAMPOS.filter(function (c) {
+      return !c.solo || c.solo.indexOf(plantillaId) !== -1;
+    });
+  }
 
   function camposPorDefecto() {
     return {
@@ -34,8 +52,19 @@
       defensa: '4',
       artista: 'Ilustracion propia',
       edicion: 'FRJ',
-      rareza: 'Rara',
-      numero: '001/180'
+      rareza: 'R',
+      numero: '001/180',
+      idioma: 'ES',
+      lealtad: '4',
+      pw1: '+1',
+      pw1t: 'Roba una carta y despues descarta una carta.',
+      pw2: '-2',
+      pw2t: 'Crea una ficha de criatura Enano 2/2 con prisa.',
+      pw3: '-7',
+      pw3t: 'Las criaturas que controlas obtienen +3/+3 y vuelan hasta el final del turno.',
+      saga1: 'Busca en tu biblioteca una carta de Montana y ponla en el campo de batalla girada.',
+      saga2: 'Descarta una carta, despues roba dos cartas.',
+      saga3: 'Exilia esta Saga, despues devuelvela al campo de batalla transformada.'
     };
   }
 
@@ -191,6 +220,8 @@
     if (tipo === 'texto') return P.texto('tmp', 'Texto', 0, 0, 200, 60, '', {});
     if (tipo === 'imagen') return P.imagen('tmp', 'Imagen', 0, 0, 200, 200);
     if (tipo === 'mana') return P.mana('tmp', 'Simbolos', 0, 0, 200, 50);
+    if (tipo === 'simbolo') return P.simbolo('tmp', 'Simbolo de edicion', 0, 0, 50, 50);
+    if (tipo === 'marca') return P.marca('tmp', 'Marca de agua', 0, 0, 180, 180);
     return P.panel('tmp', 'Panel', 0, 0, 200, 200);
   }
 
@@ -236,6 +267,7 @@
   return {
     VERSION: VERSION,
     CAMPOS: CAMPOS,
+    camposDe: camposDe,
     camposPorDefecto: camposPorDefecto,
     nueva: nueva,
     cambiarPlantilla: cambiarPlantilla,

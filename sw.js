@@ -2,7 +2,7 @@
    Al cambiar algun archivo, sube el numero de VERSION. */
 'use strict';
 
-const VERSION = 'forja-cartas-v4';
+const VERSION = 'forja-cartas-v5';
 
 const ARCHIVOS = [
   './',
@@ -10,6 +10,7 @@ const ARCHIVOS = [
   './manifest.json',
   './css/estilos.css',
   './js/util.js',
+  './js/formas.js',
   './js/texto.js',
   './js/plantillas.js',
   './js/estado.js',

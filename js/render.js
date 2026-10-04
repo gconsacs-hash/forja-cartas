@@ -67,6 +67,25 @@
         ctx.lineTo(x, y + h * 0.3);
         ctx.closePath();
         break;
+      case 'corona':
+        // banda con el canto inferior en puntas: la corona de las legendarias
+        var rc = Math.min(h * 0.5, 24);
+        var puntas = 6;
+        var paso = w / puntas;
+        ctx.beginPath();
+        ctx.moveTo(x + rc, y);
+        ctx.lineTo(x + w - rc, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rc);
+        ctx.lineTo(x + w, y + h * 0.58);
+        for (var i = 0; i < puntas; i++) {
+          var x0 = x + w - i * paso;
+          ctx.lineTo(x0 - paso * 0.5, y + h);
+          ctx.lineTo(x0 - paso, y + h * 0.58);
+        }
+        ctx.lineTo(x, y + rc);
+        ctx.quadraticCurveTo(x, y, x + rc, y);
+        ctx.closePath();
+        break;
       case 'rombo':
         ctx.beginPath();
         ctx.moveTo(x + w / 2, y);
@@ -239,6 +258,69 @@
       ctx.stroke();
       ctx.restore();
     }
+  }
+
+  /* --- simbolo de edicion y marca de agua ----------------------------- */
+
+  function dibujarSimbolo(ctx, el, ident) {
+    var F = raiz.CDFormas;
+    var rareza = F.RAREZAS[el.rareza] || F.RAREZAS.rara;
+    var cx = el.w / 2;
+    var cy = el.h / 2;
+    var r = Math.min(el.w, el.h) / 2 - (el.borde ? el.borde.ancho : 0);
+    if (r <= 0) return;
+    ctx.save();
+    if (el.sombra > 0) {
+      ctx.shadowColor = 'rgba(0,0,0,' + U.limitar(el.sombra, 0, 1) + ')';
+      ctx.shadowBlur = r * 0.5;
+      ctx.shadowOffsetY = r * 0.12;
+    }
+    var deg = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+    deg.addColorStop(0, U.resolverColor(rareza.a, ident));
+    deg.addColorStop(1, U.resolverColor(rareza.b, ident));
+    F.ruta(ctx, el.forma, cx, cy, r);
+    ctx.fillStyle = deg;
+    ctx.fill();
+    ctx.restore();
+    if (el.borde && el.borde.ancho > 0) {
+      ctx.save();
+      F.ruta(ctx, el.forma, cx, cy, r);
+      ctx.lineWidth = el.borde.ancho;
+      ctx.strokeStyle = U.resolverColor(el.borde.color, ident);
+      ctx.stroke();
+      ctx.restore();
+    }
+    // brillo superior, para que parezca metal estampado
+    ctx.save();
+    F.ruta(ctx, el.forma, cx, cy, r);
+    ctx.clip();
+    var luz = ctx.createLinearGradient(0, cy - r, 0, cy + r * 0.2);
+    luz.addColorStop(0, 'rgba(255,255,255,0.45)');
+    luz.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = luz;
+    ctx.fillRect(0, 0, el.w, el.h);
+    ctx.restore();
+  }
+
+  function dibujarMarca(ctx, el, ident) {
+    var cx = el.w / 2;
+    var cy = el.h / 2;
+    var r = Math.min(el.w, el.h) / 2;
+    if (r <= 0) return;
+    if (el.estilo === 'mana') {
+      M.dibujar(ctx, el.simbolo, cx, cy, r, { sombra: 0 });
+      return;
+    }
+    ctx.save();
+    raiz.CDFormas.ruta(ctx, el.simbolo, cx, cy, r);
+    ctx.fillStyle = U.resolverColor(el.color, ident);
+    ctx.fill();
+    if (el.contorno > 0) {
+      ctx.lineWidth = el.contorno;
+      ctx.strokeStyle = U.resolverColor(el.colorContorno || el.color, ident);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   /* --- texto --------------------------------------------------------- */
@@ -418,6 +500,8 @@
         else if (el.tipo === 'imagen') dibujarImagen(ctx, el, ident);
         else if (el.tipo === 'texto') dibujarTexto(ctx, el, ident, carta.campos);
         else if (el.tipo === 'mana') dibujarMana(ctx, el, ident, carta.campos);
+        else if (el.tipo === 'simbolo') dibujarSimbolo(ctx, el, ident);
+        else if (el.tipo === 'marca') dibujarMarca(ctx, el, ident);
       } catch (e) {
         if (raiz.console) console.warn('Error dibujando', el.id, e);
       }

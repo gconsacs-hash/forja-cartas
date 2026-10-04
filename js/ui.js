@@ -44,7 +44,7 @@
     if (instalada()) return;              // ya esta instalada: no estorbar
     if (location.protocol === 'file:') return;
 
-    var g = C.grupo(caja, 'Instalar en este dispositivo', true);
+    var g = C.grupo(caja, 'Instalar en este dispositivo', !!App.instalacion.evento);
 
     if (App.instalacion.evento) {
       C.boton(g, '⬇ Instalar Forja de Cartas', function () {
@@ -107,27 +107,77 @@
 
   /* ------------------------------------------------------------ carta */
 
+  /* Galeria de marcos: cada miniatura es la carta actual dibujada con esa
+     plantilla, asi se ve el resultado antes de cambiar. */
+  function galeriaMarcos(caja) {
+    var grupos = [];
+    P.LISTA.forEach(function (info) {
+      var g = grupos.filter(function (x) { return x.nombre === info.grupo; })[0];
+      if (!g) { g = { nombre: info.grupo, items: [] }; grupos.push(g); }
+      g.items.push(info);
+    });
+    grupos.forEach(function (grupo) {
+      var tit = C.el('span', 'campo-nombre', caja);
+      tit.textContent = grupo.nombre;
+      var rejilla = C.el('div', 'marcos', caja);
+      grupo.items.forEach(function (info) {
+        var activo = carta().plantilla === info.id;
+        var tarjeta = C.el('button', 'marco' + (activo ? ' activo' : ''), rejilla);
+        tarjeta.type = 'button';
+        tarjeta.title = info.detalle;
+        var lienzo = C.el('canvas', null, tarjeta);
+        var muestra = E.clonar(carta());
+        if (!activo) E.cambiarPlantilla(muestra, info.id, true);
+        Ex.miniatura(lienzo, muestra, 112);
+        var pie = C.el('span', null, tarjeta);
+        pie.textContent = info.nombre;
+        tarjeta.addEventListener('click', function () {
+          if (activo) return;
+          App.registrar();
+          E.cambiarPlantilla(carta(), info.id, true);
+          App.seleccionar(null);
+          App.refrescar('todo');
+          App.repintar();
+          App.mensaje('Marco cambiado a "' + info.nombre + '". Los textos y las imagenes se conservan.');
+        });
+      });
+    });
+  }
+
+  /* Piezas que se encienden o apagan sin tocar el resto del marco. */
+  function piezas(caja) {
+    var opcionales = [
+      { id: 'corona', nombre: 'Corona legendaria' },
+      { id: 'simbolo-edicion', nombre: 'Simbolo de edicion' },
+      { id: 'marca-agua', nombre: 'Marca de agua' },
+      { id: 'caja-fr', nombre: 'Caja de fuerza/resistencia' },
+      { id: 'credito', nombre: 'Datos del coleccionista' }
+    ];
+    var hay = false;
+    opcionales.forEach(function (op) {
+      var el = E.buscar(carta(), op.id);
+      if (!el) return;
+      hay = true;
+      C.casilla(caja, op.nombre, function () { return el.visible; }, function (v) {
+        App.registrar();
+        el.visible = v;
+        if (op.id === 'caja-fr') {
+          var txt = E.buscar(carta(), 'fr');
+          if (txt) txt.visible = v;
+        }
+        App.repintar();
+        App.refrescar('capas');
+      });
+    });
+    if (!hay) C.aviso(caja, 'Esta plantilla no trae piezas opcionales.');
+  }
+
   function seccionCarta(caja) {
     caja.innerHTML = '';
-    var g = C.grupo(caja, 'Carta y marco', true);
+    var gm = C.grupo(caja, 'Elegir marco', true);
+    galeriaMarcos(gm);
 
-    C.seleccion(g, 'Plantilla',
-      P.LISTA.map(function (p) { return [p.id, p.nombre]; }),
-      function () { return carta().plantilla; },
-      function (v) {
-        if (!confirm('Cambiar de plantilla rehace el marco. Se conservan los textos y las imagenes. ¿Seguir?')) {
-          App.refrescar('todo');
-          return;
-        }
-        App.registrar();
-        E.cambiarPlantilla(carta(), v, true);
-        App.seleccionar(null);
-        App.refrescar('todo');
-        App.repintar();
-      });
-    var detalle = P.LISTA.filter(function (p) { return p.id === carta().plantilla; })[0];
-    if (detalle) C.aviso(g, detalle.detalle);
-
+    var g = C.grupo(caja, 'Color y piezas', true);
     var ident = C.el('div', 'identidad', g);
     var tit = C.el('span', 'campo-nombre', ident);
     tit.textContent = 'Identidad de color (pinta el marco)';
@@ -150,6 +200,10 @@
       b.style.color = U.textoLegible(p.a);
     });
     C.aviso(g, 'Varios colores a la vez dan marco dorado multicolor.');
+
+    var tp = C.el('span', 'campo-nombre', g);
+    tp.textContent = 'Piezas de esta plantilla';
+    piezas(g);
 
     C.color(g, 'Borde exterior de la carta',
       function () { return carta().fondo.color; },
@@ -195,8 +249,9 @@
   function seccionTextos(caja) {
     caja.innerHTML = '';
     var g = C.grupo(caja, 'Textos de la carta', true);
-    E.CAMPOS.forEach(function (campo) {
+    E.camposDe(carta().plantilla).forEach(function (campo) {
       if (campo.tipo === 'contador') return;
+      if (campo.grupo === 'coleccionista') return;
       var obtener = function () { return carta().campos[campo.clave]; };
       var fijar = function (v) { carta().campos[campo.clave] = v; App.repintar(); };
       if (campo.tipo === 'area') {
@@ -308,21 +363,129 @@
     }, { accept: '.ttf,.otf,.woff,.woff2' });
   }
 
+  /* --------------------------------------------------------- edicion */
+
+  function seccionEdicion(caja) {
+    caja.innerHTML = '';
+    var F = raiz.CDFormas;
+
+    var simbolo = carta().elementos.filter(function (el) { return el.tipo === 'simbolo'; })[0];
+    var g1 = C.grupo(caja, 'Simbolo de edicion', true);
+    if (!simbolo) {
+      C.aviso(g1, 'Esta plantilla no trae simbolo de edicion.');
+      C.boton(g1, 'Anadir simbolo', function () {
+        App.registrar();
+        var el = P.simbolo(U.uid('simbolo'), 'Simbolo de edicion', 620, 600, 50, 50);
+        el.anadido = true;
+        carta().elementos.push(el);
+        App.seleccionar(el.id);
+        App.refrescar('todo');
+        App.repintar();
+      }, 'mini');
+    } else {
+      C.casilla(g1, 'Mostrarlo en la carta', function () { return simbolo.visible; },
+        function (v) { App.registrar(); simbolo.visible = v; App.repintar(); App.refrescar('capas'); });
+      var rejilla = C.el('div', 'formas', g1);
+      F.CATALOGO.forEach(function (f) {
+        var b = C.boton(rejilla, '', function () {
+          App.registrar();
+          simbolo.forma = f.id;
+          App.repintar();
+          App.refrescar('edicion');
+        }, 'forma' + (simbolo.forma === f.id ? ' activo' : ''));
+        b.title = f.nombre;
+        var lienzo = document.createElement('canvas');
+        lienzo.width = 40;
+        lienzo.height = 40;
+        var ctx = lienzo.getContext('2d');
+        F.ruta(ctx, f.id, 20, 20, 17);
+        ctx.fillStyle = '#e4d7bd';
+        ctx.fill();
+        b.style.backgroundImage = 'url(' + lienzo.toDataURL() + ')';
+      });
+      C.seleccion(g1, 'Rareza',
+        Object.keys(F.RAREZAS).map(function (k) { return [k, F.RAREZAS[k].nombre]; }),
+        function () { return simbolo.rareza; },
+        function (v) { simbolo.rareza = v; App.repintar(); });
+      C.rango(g1, 'Tamano', function () { return simbolo.w; }, function (v) {
+        var centroX = simbolo.x + simbolo.w / 2;
+        var centroY = simbolo.y + simbolo.h / 2;
+        simbolo.w = v;
+        simbolo.h = v;
+        simbolo.x = Math.round(centroX - v / 2);
+        simbolo.y = Math.round(centroY - v / 2);
+        App.repintar();
+      }, { min: 20, max: 140 });
+      C.aviso(g1, 'Si prefieres el simbolo de una edicion tuya, anade una imagen desde Capas ' +
+        'y colocala aqui mismo.');
+    }
+
+    var agua = carta().elementos.filter(function (el) { return el.tipo === 'marca'; })[0];
+    var g2 = C.grupo(caja, 'Marca de agua', true);
+    if (!agua) {
+      C.aviso(g2, 'Esta plantilla no trae marca de agua.');
+    } else {
+      C.casilla(g2, 'Mostrarla detras del texto', function () { return agua.visible; },
+        function (v) { App.registrar(); agua.visible = v; App.repintar(); App.refrescar('capas'); });
+      C.seleccion(g2, 'Tipo de dibujo', [['forma', 'Figura propia'], ['mana', 'Simbolo de mana']],
+        function () { return agua.estilo; },
+        function (v) {
+          agua.estilo = v;
+          agua.simbolo = v === 'mana' ? 'R' : 'yunque';
+          App.repintar();
+          App.refrescar('edicion');
+        });
+      if (agua.estilo === 'mana') {
+        C.seleccion(g2, 'Simbolo',
+          ['W', 'U', 'B', 'R', 'G', 'C'].map(function (s) { return [s, s]; }),
+          function () { return agua.simbolo; },
+          function (v) { agua.simbolo = v; App.repintar(); });
+      } else {
+        C.seleccion(g2, 'Figura',
+          F.CATALOGO.map(function (f) { return [f.id, f.nombre]; }),
+          function () { return agua.simbolo; },
+          function (v) { agua.simbolo = v; App.repintar(); });
+        C.color(g2, 'Color', function () { return agua.color; },
+          function (v) { agua.color = v; App.repintar(); });
+      }
+      C.rango(g2, 'Opacidad', function () { return agua.opacidad; },
+        function (v) { agua.opacidad = v; App.repintar(); }, { min: 0, max: 1, paso: 0.02, decimales: 2 });
+      C.rango(g2, 'Tamano', function () { return agua.w; }, function (v) {
+        var cx = agua.x + agua.w / 2;
+        var cy = agua.y + agua.h / 2;
+        agua.w = v;
+        agua.h = v;
+        agua.x = Math.round(cx - v / 2);
+        agua.y = Math.round(cy - v / 2);
+        App.repintar();
+      }, { min: 60, max: 420 });
+    }
+
+    var g3 = C.grupo(caja, 'Datos del coleccionista', true);
+    E.CAMPOS.filter(function (c) { return c.grupo === 'coleccionista'; }).forEach(function (campo) {
+      recordar(C.texto(g3, campo.etiqueta,
+        function () { return carta().campos[campo.clave]; },
+        function (v) { carta().campos[campo.clave] = v; App.repintar(); }));
+    });
+    C.aviso(g3, 'La linea inferior de la carta usa estos datos. Puedes reescribirla entera ' +
+      'seleccionando "Datos del coleccionista" en Capas.');
+  }
+
   /* --------------------------------------------------------- combate */
 
   function seccionCombate(caja) {
     caja.innerHTML = '';
     var g = C.grupo(caja, 'Ataque y defensa', true);
     var f = C.fila(g, 'contadores');
-    C.contador(f, 'Ataque / fuerza',
-      function () { return carta().campos.ataque; },
-      function (v) { carta().campos.ataque = v; App.repintar(); });
-    C.contador(f, 'Defensa / resistencia',
-      function () { return carta().campos.defensa; },
-      function (v) { carta().campos.defensa = v; App.repintar(); });
+    E.camposDe(carta().plantilla).forEach(function (campo) {
+      if (campo.tipo !== 'contador') return;
+      C.contador(f, campo.etiqueta,
+        function () { return carta().campos[campo.clave]; },
+        function (v) { carta().campos[campo.clave] = v; App.repintar(); });
+    });
 
     var relacionados = carta().elementos.filter(function (el) {
-      return /fr|fuerza|defensa/.test(el.id);
+      return /^(caja-)?(fr|fuerza|defensa|lealtad)$/.test(el.id);
     });
     if (relacionados.length) {
       var tit = C.el('span', 'campo-nombre', g);
@@ -656,6 +819,34 @@
 
   /* --------------------------------------------------------- arranque */
 
+  /* Pestanas: cada una arma su contenido en el mismo contenedor. */
+  var PESTANAS = [
+    { id: 'marco', nombre: 'Marco', construir: seccionCarta },
+    { id: 'texto', nombre: 'Texto', construir: seccionTextos },
+    { id: 'arte', nombre: 'Arte', construir: seccionImagenes },
+    { id: 'edicion', nombre: 'Edicion', construir: seccionEdicion },
+    { id: 'contadores', nombre: 'Contadores', construir: seccionCombate },
+    { id: 'guardar', nombre: 'Guardar', construir: seccionGaleria }
+  ];
+  var activa = 'marco';
+
+  function barraPestanas() {
+    zonas.pestanas.innerHTML = '';
+    PESTANAS.forEach(function (p) {
+      C.boton(zonas.pestanas, p.nombre, function () {
+        activa = p.id;
+        barraPestanas();
+        construirActiva();
+        zonas.pestana.scrollIntoView({ block: 'nearest' });
+      }, 'pestana' + (activa === p.id ? ' activa' : ''));
+    });
+  }
+
+  function construirActiva() {
+    var def = PESTANAS.filter(function (p) { return p.id === activa; })[0] || PESTANAS[0];
+    def.construir(zonas.pestana);
+  }
+
   function iniciar(app, contenedores) {
     App = app;
     zonas = contenedores;
@@ -663,28 +854,30 @@
   }
 
   function refrescar(parte) {
-    if (parte === 'instalar') { seccionInstalar(zonas.instalar); return; }
-    if (parte === 'todo') {
-      seccionInstalar(zonas.instalar);
-      seccionCarta(zonas.carta);
-      seccionTextos(zonas.textos);
-      seccionImagenes(zonas.imagenes);
-      seccionCombate(zonas.combate);
-      seccionCapas(zonas.capas);
-      seccionInspector(zonas.inspector);
-      seccionGaleria(zonas.galeria);
-      return;
-    }
+    if (parte === 'inspector') { seccionInspector(zonas.inspector); return; }
     if (parte === 'capas') {
       seccionCapas(zonas.capas);
       seccionInspector(zonas.inspector);
-      seccionCombate(zonas.combate);
       return;
     }
-    if (parte === 'inspector') { seccionInspector(zonas.inspector); return; }
-    if (parte === 'galeria') { seccionGaleria(zonas.galeria); return; }
-    if (parte === 'imagenes') { seccionImagenes(zonas.imagenes); return; }
+    if (parte === 'instalar') { seccionInstalar(zonas.instalar); return; }
+    if (parte === 'todo') {
+      seccionInstalar(zonas.instalar);
+      barraPestanas();
+      construirActiva();
+      seccionCapas(zonas.capas);
+      seccionInspector(zonas.inspector);
+      return;
+    }
+    construirActiva();   // galeria, imagenes, edicion...
   }
 
-  raiz.CDUI = { iniciar: iniciar, refrescar: refrescar };
+  /* Deja a la vista la pestana que corresponde (la usa el inspector). */
+  function abrir(id) {
+    activa = id;
+    barraPestanas();
+    construirActiva();
+  }
+
+  raiz.CDUI = { iniciar: iniciar, refrescar: refrescar, abrir: abrir };
 })(typeof self !== 'undefined' ? self : this);

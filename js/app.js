@@ -216,13 +216,10 @@
 
   UI.iniciar(App, {
     instalar: document.getElementById('zona-instalar'),
-    carta: document.getElementById('zona-carta'),
-    textos: document.getElementById('zona-textos'),
-    imagenes: document.getElementById('zona-imagenes'),
-    combate: document.getElementById('zona-combate'),
+    pestanas: document.getElementById('pestanas'),
+    pestana: document.getElementById('zona-pestana'),
     capas: document.getElementById('zona-capas'),
-    inspector: document.getElementById('zona-inspector'),
-    galeria: document.getElementById('zona-galeria')
+    inspector: document.getElementById('zona-inspector')
   });
 
   inter = I.crear({

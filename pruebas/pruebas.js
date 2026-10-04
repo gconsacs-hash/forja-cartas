@@ -253,7 +253,8 @@ test('todas las plantillas se crean con elementos validos', () => {
     p.elementos.forEach(el => {
       assert.ok(!vistos[el.id], 'id repetido en ' + info.id + ': ' + el.id);
       vistos[el.id] = true;
-      assert.ok(['panel', 'imagen', 'texto', 'mana'].includes(el.tipo));
+      assert.ok(['panel', 'imagen', 'texto', 'mana', 'simbolo', 'marca'].includes(el.tipo),
+        info.id + ' · tipo desconocido: ' + el.tipo);
       assert.ok(el.w > 0 && el.h > 0, el.id + ' sin tamano');
       assert.ok(el.x >= -2 && el.y >= -2, el.id + ' fuera de la carta');
       assert.ok(el.x + el.w <= P.ANCHO + 2, el.id + ' se sale a lo ancho');
@@ -274,11 +275,71 @@ test('las plantillas de criatura traen contadores de ataque y defensa', () => {
 });
 
 test('cada plantilla deja un hueco de imagen y un hueco de habilidades', () => {
+  // las plantillas por bloques (caminante, saga) usan sus propios campos
+  const esHabilidad = /\{\{(reglas|pw[0-9]t|saga[0-9])\}\}/;
   P.LISTA.forEach(info => {
     const els = P.crear(info.id).elementos;
     assert.ok(els.some(el => el.tipo === 'imagen'), info.id + ' sin imagen');
-    assert.ok(els.some(el => /\{\{reglas\}\}/.test(el.contenido || '')), info.id + ' sin habilidades');
+    assert.ok(els.some(el => esHabilidad.test(el.contenido || '')), info.id + ' sin habilidades');
   });
+});
+
+test('cada campo que usan las plantillas existe en el modelo', () => {
+  const conocidos = E.CAMPOS.map(c => c.clave);
+  P.LISTA.forEach(info => {
+    P.crear(info.id).elementos.forEach(el => {
+      const texto = String(el.contenido || '');
+      let m;
+      const re = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
+      while ((m = re.exec(texto))) {
+        assert.ok(conocidos.includes(m[1]),
+          info.id + ' · ' + el.id + ' usa el campo inexistente {{' + m[1] + '}}');
+      }
+    });
+  });
+});
+
+test('las plantillas por bloques traen sus contadores', () => {
+  const pw = P.crear('magic-planeswalker').elementos;
+  [1, 2, 3].forEach(n => {
+    assert.ok(pw.some(el => el.contenido === '{{pw' + n + '}}'), 'falta el contador ' + n);
+    assert.ok(pw.some(el => el.contenido === '{{pw' + n + 't}}'), 'falta la habilidad ' + n);
+  });
+  assert.ok(pw.some(el => el.contenido === '{{lealtad}}'), 'falta la lealtad inicial');
+  const saga = P.crear('magic-saga').elementos;
+  ['I', 'II', 'III'].forEach(n => {
+    assert.ok(saga.some(el => el.contenido === n), 'falta el capitulo ' + n);
+  });
+});
+
+test('camposDe solo ofrece los campos de la plantilla activa', () => {
+  const normal = E.camposDe('magic-moderno').map(c => c.clave);
+  const caminante = E.camposDe('magic-planeswalker').map(c => c.clave);
+  assert.ok(!normal.includes('lealtad'), 'la criatura no deberia pedir lealtad');
+  assert.ok(caminante.includes('lealtad'));
+  assert.ok(caminante.includes('pw2t'));
+  assert.ok(!caminante.includes('saga1'));
+  assert.ok(normal.includes('nombre') && normal.includes('reglas'));
+});
+
+test('el simbolo de edicion y la marca de agua nacen con datos validos', () => {
+  const F = require('../js/formas.js');
+  const els = P.crear('magic-moderno').elementos;
+  const simbolo = els.filter(el => el.tipo === 'simbolo')[0];
+  const marca = els.filter(el => el.tipo === 'marca')[0];
+  assert.ok(simbolo, 'falta el simbolo de edicion');
+  assert.ok(F.RAREZAS[simbolo.rareza], 'rareza desconocida: ' + simbolo.rareza);
+  assert.ok(F.CATALOGO.some(f => f.id === simbolo.forma), 'forma desconocida');
+  assert.ok(marca, 'falta la marca de agua');
+  assert.strictEqual(marca.visible, false, 'la marca de agua deberia nacer apagada');
+  assert.ok(F.CATALOGO.some(f => f.id === marca.simbolo));
+});
+
+test('la marca de agua queda detras del texto de reglas', () => {
+  const els = P.crear('magic-moderno').elementos;
+  const marca = els.findIndex(el => el.tipo === 'marca');
+  const reglas = els.findIndex(el => /\{\{reglas\}\}/.test(el.contenido || ''));
+  assert.ok(marca < reglas, 'la marca taparia el texto');
 });
 
 test('ninguna propiedad de elemento se cuela dentro del estilo', () => {
@@ -287,7 +348,7 @@ test('ninguna propiedad de elemento se cuela dentro del estilo', () => {
   const prohibidas = ['visible', 'bloqueado', 'x', 'y', 'w', 'h', 'rot', 'opacidad'];
   P.LISTA.forEach(info => {
     P.crear(info.id).elementos.forEach(el => {
-      if (!el.estilo) return;
+      if (!el.estilo || typeof el.estilo !== 'object') return;
       prohibidas.forEach(k => {
         assert.ok(!(k in el.estilo), info.id + ' · ' + el.id + ' tiene "' + k + '" en el estilo');
       });
